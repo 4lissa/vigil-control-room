@@ -1,0 +1,9 @@
+# os / editor
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# env files
+.env*
+!.env.example

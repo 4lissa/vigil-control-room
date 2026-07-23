@@ -1,0 +1,9 @@
+# build artifacts
+/target/
+
+# rustfmt backup files
+**/*.rs.bk
+
+# env files
+.env*
+!.env.example
