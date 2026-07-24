@@ -1,5 +1,7 @@
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+use vigil_server::shared::{config::Config, db::create_pool};
+use vigil_server::AppState;
 
 #[tokio::main]
 async fn main() {
@@ -7,13 +9,18 @@ async fn main() {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let app = vigil_server::build_router();
+    let config = Config::from_env();
+    let db = create_pool(&config.database_url).await;
+    let port = config.server_port;
+    let state = AppState::new(config, db);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
+    let app = vigil_server::build_router(state);
+
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
-        .expect("failed to bind port 8080");
+        .expect("failed to bind port");
 
-    info!("server listening on port 8080");
+    info!("server listening on port {port}");
 
     axum::serve(listener, app)
         .await
