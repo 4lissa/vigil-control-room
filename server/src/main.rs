@@ -1,4 +1,3 @@
-use axum::{Router, routing::get};
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
@@ -8,7 +7,7 @@ async fn main() {
         .with_env_filter(EnvFilter::from_default_env())
         .init();
 
-    let app = Router::new().route("/health", get(health));
+    let app = vigil_server::build_router();
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await
@@ -19,8 +18,4 @@ async fn main() {
     axum::serve(listener, app)
         .await
         .expect("server error");
-}
-
-async fn health() -> &'static str {
-    "ok"
 }
