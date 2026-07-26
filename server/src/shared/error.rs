@@ -1,7 +1,7 @@
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde_json::json;
 
@@ -32,7 +32,9 @@ impl IntoResponse for AppError {
             ),
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, "NOT_FOUND", msg),
             AppError::Conflict(msg) => (StatusCode::CONFLICT, "CONFLICT", msg),
-            AppError::ValidationError(msg) => (StatusCode::UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", msg),
+            AppError::ValidationError(msg) => {
+                (StatusCode::UNPROCESSABLE_ENTITY, "VALIDATION_ERROR", msg)
+            }
             AppError::InternalError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "INTERNAL_ERROR",

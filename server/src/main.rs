@@ -1,7 +1,7 @@
 use tracing::info;
 use tracing_subscriber::EnvFilter;
-use vigil_server::shared::{config::Config, db::create_pool};
 use vigil_server::AppState;
+use vigil_server::shared::{config::Config, db::create_pool};
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +22,5 @@ async fn main() {
 
     info!("server listening on port {port}");
 
-    axum::serve(listener, app)
-        .await
-        .expect("server error");
+    axum::serve(listener, app).await.expect("server error");
 }

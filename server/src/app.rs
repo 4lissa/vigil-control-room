@@ -1,7 +1,7 @@
-use axum::{Router, routing::get};
 use crate::state::AppState;
+use axum::{Router, routing::get};
 
-pub fn build_router(state: AppState) -> Router {
+pub fn build_router(_state: AppState) -> Router {
     Router::new().route("/health", get(health))
 }
 

@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use crate::shared::config::Config;
+use sqlx::PgPool;
 
 #[derive(Debug, Clone)]
 pub struct AppState {
