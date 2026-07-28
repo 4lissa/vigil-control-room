@@ -5,16 +5,19 @@ use argon2::{
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::features::auth::{model::{Session, User}, repo};
+use crate::features::auth::{
+    model::{Session, User},
+    repo,
+};
 use crate::shared::error::AppError;
 use sqlx::PgPool;
 
 const SESSION_DURATION_DAYS: i64 = 7;
 
 pub async fn register(
-    pool:     &PgPool,
+    pool: &PgPool,
     username: &str,
-    email:    &str,
+    email: &str,
     password: &str,
 ) -> Result<User, AppError> {
     let password_hash = hash_password(password).await?;
@@ -33,8 +36,8 @@ pub async fn register(
 }
 
 pub async fn login(
-    pool:     &PgPool,
-    email:    &str,
+    pool: &PgPool,
+    email: &str,
     password: &str,
 ) -> Result<(User, Session), AppError> {
     let user = repo::find_user_by_email(pool, email)
@@ -73,10 +76,10 @@ pub async fn me(pool: &PgPool, user_id: Uuid) -> Result<User, AppError> {
 }
 
 pub async fn update_profile(
-    pool:         &PgPool,
-    user_id:      Uuid,
-    username:     Option<&str>,
-    language:     Option<&str>,
+    pool: &PgPool,
+    user_id: Uuid,
+    username: Option<&str>,
+    language: Option<&str>,
     new_password: Option<&str>,
     old_password: Option<&str>,
 ) -> Result<User, AppError> {
@@ -90,12 +93,9 @@ pub async fn update_profile(
                 "current password is required to set a new one".into(),
             ))?;
 
-            let hash = user
-                .password_hash
-                .as_deref()
-                .ok_or(AppError::BadRequest(
-                    "cannot set password on an OAuth-only account".into(),
-                ))?;
+            let hash = user.password_hash.as_deref().ok_or(AppError::BadRequest(
+                "cannot set password on an OAuth-only account".into(),
+            ))?;
 
             verify_password(old_pwd, hash).await?;
 
@@ -104,14 +104,8 @@ pub async fn update_profile(
         None => None,
     };
 
-    let user = repo::update_user(
-        pool,
-        user_id,
-        username,
-        language,
-        password_hash.as_deref(),
-    )
-    .await?;
+    let user =
+        repo::update_user(pool, user_id, username, language, password_hash.as_deref()).await?;
 
     Ok(user)
 }
