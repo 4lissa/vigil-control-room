@@ -42,6 +42,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: server
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: sqlx-cli
       - run: cargo sqlx migrate run
       - run: cargo fmt --check
       - run: cargo clippy -- -D warnings
