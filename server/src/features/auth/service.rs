@@ -147,3 +147,34 @@ async fn verify_password(password: &str, hash: &str) -> Result<(), AppError> {
         AppError::InternalError
     })?
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn hash_then_verify_with_correct_password_succeeds() {
+        let hash = hash_password("password123").await.unwrap();
+        assert!(verify_password("password123", &hash).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn verify_with_wrong_password_returns_unauthorized() {
+        let hash = hash_password("password123").await.unwrap();
+        let result = verify_password("wrong-password", &hash).await;
+        assert!(matches!(result, Err(AppError::Unauthorized)));
+    }
+
+    #[tokio::test]
+    async fn verify_with_malformed_hash_returns_internal_error() {
+        let result = verify_password("password123", "not-a-valid-hash").await;
+        assert!(matches!(result, Err(AppError::InternalError)));
+    }
+
+    #[tokio::test]
+    async fn hash_password_produces_distinct_hashes_for_same_password() {
+        let hash1 = hash_password("password123").await.unwrap();
+        let hash2 = hash_password("password123").await.unwrap();
+        assert_ne!(hash1, hash2, "salts should differ between hashes");
+    }
+}

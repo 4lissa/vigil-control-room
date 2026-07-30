@@ -26,3 +26,29 @@ impl Session {
         self.expires_at < OffsetDateTime::now_utc()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn session_expiring_at(expires_at: OffsetDateTime) -> Session {
+        Session {
+            id: Uuid::now_v7(),
+            user_id: Uuid::now_v7(),
+            created_at: OffsetDateTime::now_utc(),
+            expires_at,
+        }
+    }
+
+    #[test]
+    fn is_expired_returns_false_for_future_date() {
+        let session = session_expiring_at(OffsetDateTime::now_utc() + time::Duration::days(1));
+        assert!(!session.is_expired());
+    }
+
+    #[test]
+    fn is_expired_returns_true_for_past_date() {
+        let session = session_expiring_at(OffsetDateTime::now_utc() - time::Duration::days(1));
+        assert!(session.is_expired());
+    }
+}
