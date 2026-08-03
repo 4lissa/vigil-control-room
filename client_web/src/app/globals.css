@@ -1,26 +1,59 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@theme {
+  --color-bg-primary: #0d1117;
+  --color-bg-secondary: #161b22;
+  --color-bg-tertiary: #21262d;
+  --color-border: #30363d;
+  --color-border-strong: #484f58;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-text-primary: #e6edf3;
+  --color-text-secondary: #8b949e;
+  --color-text-muted: #9ba3ab;
+
+  --color-accent: #7db8fb;
+  --color-accent-bg: #1a2a3a;
+  --color-accent-border: #1a3a5a;
+
+  --color-success: #46d280;
+  --color-success-bg: #0f2a0f;
+  --color-success-border: #1a4a1a;
+
+  --color-danger: #ff9090;
+  --color-danger-bg: #3d1010;
+  --color-danger-border: #5a1a1a;
+
+  --color-warning: #ff8733;
+  --color-warning-bg: #2a1500;
+  --color-warning-border: #4a2500;
+
+  --color-medium: #facc15;
+  --color-medium-bg: #2a2200;
+  --color-medium-border: #4a3c00;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --text-title: 24px;
+  --text-subtitle: 16px;
+  --text-body: 14px;
+  --text-caption: 12px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
