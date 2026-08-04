@@ -1,6 +1,6 @@
-use axum::{Router, middleware, routing::get};
-use tower_http::cors::{CorsLayer, Any};
 use axum::http::Method;
+use axum::{Router, middleware, routing::get};
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::features::auth::routes as auth_routes;
 use crate::shared::middleware::require_auth;
