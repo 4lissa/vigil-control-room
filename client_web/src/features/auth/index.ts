@@ -8,9 +8,9 @@ export {
   useUpdateProfile,
 } from "./hooks";
 export type {
+  AuthResponse,
   LoginRequest,
   RegisterRequest,
   UpdateProfileRequest,
   UserResponse,
-  LoginResponse,
 } from "./types";

@@ -30,7 +30,7 @@ beforeEach(() => {
 });
 
 describe("useRegister", () => {
-  it("calls register endpoint and returns user", async () => {
+  it("sets token and user in store on success", async () => {
     const { result } = renderHook(() => useRegister(), {
       wrapper: createWrapper(),
     });
@@ -44,12 +44,16 @@ describe("useRegister", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toMatchObject({
-      username: "alissa",
-      email: "alissa@example.com",
+      token: "my-session-token",
+      user: { username: "alissa", email: "alissa@example.com" },
     });
+
+    const { token, user } = useAuthStore.getState();
+    expect(token).toBe("my-session-token");
+    expect(user).toMatchObject({ username: "alissa" });
   });
 
-  it("sets error on failure", async () => {
+  it("does not set store on failure", async () => {
     server.use(
       http.post("http://localhost:8080/register", () => {
         return HttpResponse.json(
@@ -71,6 +75,10 @@ describe("useRegister", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe("Email already taken");
+
+    const { token, user } = useAuthStore.getState();
+    expect(token).toBeNull();
+    expect(user).toBeNull();
   });
 });
 

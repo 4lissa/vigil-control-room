@@ -4,8 +4,13 @@ import { useAuthStore } from "./store";
 import { LoginRequest, RegisterRequest, UpdateProfileRequest } from "./types";
 
 export const useRegister = () => {
+  const { setAuth } = useAuthStore();
+
   return useMutation({
     mutationFn: (body: RegisterRequest) => register(body),
+    onSuccess: (data) => {
+      setAuth(data.token, data.user);
+    },
   });
 };
 

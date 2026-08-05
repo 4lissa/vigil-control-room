@@ -2,12 +2,18 @@ import { http, HttpResponse } from "msw";
 
 export const authHandlers = [
   http.post("http://localhost:8080/register", () => {
-    return HttpResponse.json({
-      id: "123",
-      username: "alissa",
-      email: "alissa@example.com",
-      language: "en",
-    });
+    return HttpResponse.json(
+      {
+        token: "my-session-token",
+        user: {
+          id: "123",
+          username: "alissa",
+          email: "alissa@example.com",
+          language: "en",
+        },
+      },
+      { status: 201 },
+    );
   }),
 
   http.post("http://localhost:8080/login", () => {

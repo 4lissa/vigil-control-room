@@ -16,14 +16,14 @@ export interface UpdateProfileRequest {
   old_password?: string;
 }
 
+export interface AuthResponse {
+  token: string;
+  user: UserResponse;
+}
+
 export interface UserResponse {
   id: string;
   username: string;
   email: string;
   language: string;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: UserResponse;
 }

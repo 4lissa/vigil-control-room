@@ -1,17 +1,17 @@
 import { apiClient } from "@/shared/lib/api-client";
 import {
+  AuthResponse,
   LoginRequest,
-  LoginResponse,
   RegisterRequest,
   UpdateProfileRequest,
   UserResponse,
 } from "./types";
 
-export const register = (body: RegisterRequest): Promise<UserResponse> =>
-  apiClient.post<UserResponse>("/register", body);
+export const register = (body: RegisterRequest): Promise<AuthResponse> =>
+  apiClient.post<AuthResponse>("/register", body);
 
-export const login = (body: LoginRequest): Promise<LoginResponse> =>
-  apiClient.post<LoginResponse>("/login", body);
+export const login = (body: LoginRequest): Promise<AuthResponse> =>
+  apiClient.post<AuthResponse>("/login", body);
 
 export const logout = (token: string): Promise<void> =>
   apiClient.post<void>("/logout", {}, token);

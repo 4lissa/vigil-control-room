@@ -90,17 +90,20 @@ describe("apiClient", () => {
 
   describe("request methods", () => {
     it("sends POST and returns response", async () => {
-      const result = await apiClient.post<{ id: string }>("/register", {
+      const result = await apiClient.post<{ token: string }>("/register", {
         username: "alissa",
         email: "alissa@example.com",
         password: "password123",
       });
 
       expect(result).toMatchObject({
-        id: "123",
-        username: "alissa",
-        email: "alissa@example.com",
-        language: "en",
+        token: "my-session-token",
+        user: {
+          id: "123",
+          username: "alissa",
+          email: "alissa@example.com",
+          language: "en",
+        },
       });
     });
 

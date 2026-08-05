@@ -33,14 +33,14 @@ export const LoginForm = () => {
         </div>
       )}
       <Input name="email" type="email" label="Email" required />
-      <Input name="password" type="password" label="Mot de passe" required />
+      <Input name="password" type="password" label="Password" required />
       <Button
         type="submit"
         variant="primary"
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Se connecter
+        Sign in
       </Button>
     </form>
   );

@@ -1,14 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRegister, useLogin } from "../hooks";
+import { useRegister } from "../hooks";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 
 export const RegisterForm = () => {
   const router = useRouter();
   const { mutate: register, isPending, error } = useRegister();
-  const { mutate: login } = useLogin();
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -23,12 +22,7 @@ export const RegisterForm = () => {
     register(
       { username, email, password },
       {
-        onSuccess: () => {
-          login(
-            { email, password },
-            { onSuccess: () => router.push("/login") },
-          );
-        },
+        onSuccess: () => router.push("/"),
       },
     );
   };
@@ -40,16 +34,16 @@ export const RegisterForm = () => {
           {error.message}
         </div>
       )}
-      <Input name="username" type="text" label="Nom d'utilisateur" required />
+      <Input name="username" type="text" label="Username" required />
       <Input name="email" type="email" label="Email" required />
-      <Input name="password" type="password" label="Mot de passe" required />
+      <Input name="password" type="password" label="Password" required />
       <Button
         type="submit"
         variant="primary"
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Créer un compte
+        Create account
       </Button>
     </form>
   );
