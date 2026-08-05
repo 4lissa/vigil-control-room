@@ -19,7 +19,7 @@ pub async fn register(
     username: &str,
     email: &str,
     password: &str,
-) -> Result<User, AppError> {
+) -> Result<(User, Session), AppError> {
     let password_hash = hash_password(password).await?;
 
     let user = repo::insert_user(
@@ -32,7 +32,15 @@ pub async fn register(
     )
     .await?;
 
-    Ok(user)
+    let session = repo::insert_session(
+        pool,
+        Uuid::now_v7(),
+        user.id,
+        OffsetDateTime::now_utc() + time::Duration::days(SESSION_DURATION_DAYS),
+    )
+    .await?;
+
+    Ok((user, session))
 }
 
 pub async fn login(

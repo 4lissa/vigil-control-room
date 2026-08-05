@@ -6,7 +6,7 @@ use serde_json::json;
 use sqlx::PgPool;
 
 #[sqlx::test(migrations = "./migrations")]
-async fn register_returns_201(pool: PgPool) {
+async fn register_returns_201_with_token(pool: PgPool) {
     let app = common::build_test_app(pool);
     let response = common::post_json(
         app,
@@ -20,6 +20,11 @@ async fn register_returns_201(pool: PgPool) {
     .await;
 
     assert_eq!(response.status(), StatusCode::CREATED);
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert!(body["token"].is_string());
+    assert_eq!(body["user"]["username"], "alissa");
 }
 
 #[sqlx::test(migrations = "./migrations")]
@@ -91,7 +96,7 @@ async fn me_returns_401_without_token(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn me_returns_200_with_valid_token(pool: PgPool) {
     let app = common::build_test_app(pool.clone());
-    common::post_json(
+    let register_response = common::post_json(
         app,
         "/register",
         json!({
@@ -102,18 +107,7 @@ async fn me_returns_200_with_valid_token(pool: PgPool) {
     )
     .await;
 
-    let app = common::build_test_app(pool.clone());
-    let login_response = common::post_json(
-        app,
-        "/login",
-        json!({
-            "email": "alissa@example.com",
-            "password": "password123"
-        }),
-    )
-    .await;
-
-    let body = to_bytes(login_response.into_body(), usize::MAX)
+    let body = to_bytes(register_response.into_body(), usize::MAX)
         .await
         .unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
@@ -127,7 +121,7 @@ async fn me_returns_200_with_valid_token(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn logout_returns_204_and_invalidates_token(pool: PgPool) {
     let app = common::build_test_app(pool.clone());
-    common::post_json(
+    let register_response = common::post_json(
         app,
         "/register",
         json!({
@@ -138,18 +132,7 @@ async fn logout_returns_204_and_invalidates_token(pool: PgPool) {
     )
     .await;
 
-    let app = common::build_test_app(pool.clone());
-    let login_response = common::post_json(
-        app,
-        "/login",
-        json!({
-            "email": "alissa@example.com",
-            "password": "password123"
-        }),
-    )
-    .await;
-
-    let body = to_bytes(login_response.into_body(), usize::MAX)
+    let body = to_bytes(register_response.into_body(), usize::MAX)
         .await
         .unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body).unwrap();

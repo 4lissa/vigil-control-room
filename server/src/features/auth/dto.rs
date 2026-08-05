@@ -34,17 +34,17 @@ pub struct UpdateProfileRequest {
 }
 
 #[derive(Debug, Serialize)]
+pub struct AuthResponse {
+    pub token: String,
+    pub user: UserResponse,
+}
+
+#[derive(Debug, Serialize)]
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
     pub email: String,
     pub language: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct LoginResponse {
-    pub token: String,
-    pub user: UserResponse,
 }
 
 impl From<User> for UserResponse {

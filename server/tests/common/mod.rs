@@ -5,10 +5,12 @@ use axum::body::Body;
 use axum::http::Request;
 use sqlx::PgPool;
 use tower::ServiceExt;
-use uuid::Uuid;
 
 use vigil_server::AppState;
-use vigil_server::features::auth::{model::User, repo, service};
+use vigil_server::features::auth::{
+    model::{Session, User},
+    service,
+};
 use vigil_server::shared::config::Config;
 
 pub fn build_test_app(pool: PgPool) -> Router {
@@ -17,30 +19,16 @@ pub fn build_test_app(pool: PgPool) -> Router {
     vigil_server::build_router(state)
 }
 
-pub async fn create_test_user(pool: &PgPool) -> User {
+pub async fn create_test_user(pool: &PgPool) -> (User, Session) {
     service::register(pool, "testuser", "test@example.com", "password123")
         .await
         .expect("failed to create test user")
 }
 
-pub async fn create_test_user_with(pool: &PgPool, username: &str, email: &str) -> User {
+pub async fn create_test_user_with(pool: &PgPool, username: &str, email: &str) -> (User, Session) {
     service::register(pool, username, email, "password123")
         .await
         .expect("failed to create test user")
-}
-
-pub async fn create_test_session(
-    pool: &PgPool,
-    user_id: Uuid,
-) -> vigil_server::features::auth::model::Session {
-    repo::insert_session(
-        pool,
-        Uuid::now_v7(),
-        user_id,
-        time::OffsetDateTime::now_utc() + time::Duration::days(7),
-    )
-    .await
-    .expect("failed to create test session")
 }
 
 pub async fn post_json(

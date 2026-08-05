@@ -6,7 +6,7 @@ use vigil_server::shared::error::AppError;
 
 #[sqlx::test(migrations = "./migrations")]
 async fn register_succeeds_with_valid_input(pool: PgPool) {
-    let user = service::register(&pool, "alissa", "alissa@example.com", "password123")
+    let (user, session) = service::register(&pool, "alissa", "alissa@example.com", "password123")
         .await
         .unwrap();
 
@@ -14,6 +14,8 @@ async fn register_succeeds_with_valid_input(pool: PgPool) {
     assert_eq!(user.email, "alissa@example.com");
     assert!(user.password_hash.is_some());
     assert!(user.github_id.is_none());
+    assert_eq!(session.user_id, user.id);
+    assert!(!session.is_expired());
 }
 
 #[sqlx::test(migrations = "./migrations")]
@@ -47,6 +49,7 @@ async fn login_succeeds_with_correct_credentials(pool: PgPool) {
         .unwrap();
 
     assert_eq!(user.email, "alissa@example.com");
+    assert_eq!(session.user_id, user.id);
     assert!(!session.is_expired());
 }
 
@@ -68,8 +71,7 @@ async fn login_fails_when_user_not_found(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn logout_invalidates_session(pool: PgPool) {
-    let user = common::create_test_user(&pool).await;
-    let session = common::create_test_session(&pool, user.id).await;
+    let (_, session) = common::create_test_user(&pool).await;
 
     service::logout(&pool, session.id).await.unwrap();
 
@@ -81,7 +83,7 @@ async fn logout_invalidates_session(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn me_returns_user_when_found(pool: PgPool) {
-    let created = common::create_test_user(&pool).await;
+    let (created, _) = common::create_test_user(&pool).await;
     let user = service::me(&pool, created.id).await.unwrap();
     assert_eq!(user.id, created.id);
 }
@@ -94,7 +96,7 @@ async fn me_returns_not_found_when_user_missing(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn update_profile_changes_username(pool: PgPool) {
-    let user = common::create_test_user(&pool).await;
+    let (user, _) = common::create_test_user(&pool).await;
     let updated = service::update_profile(&pool, user.id, Some("newname"), None, None, None)
         .await
         .unwrap();
@@ -103,7 +105,7 @@ async fn update_profile_changes_username(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn update_profile_changes_language(pool: PgPool) {
-    let user = common::create_test_user(&pool).await;
+    let (user, _) = common::create_test_user(&pool).await;
     let updated = service::update_profile(&pool, user.id, None, Some("fr"), None, None)
         .await
         .unwrap();
@@ -112,7 +114,7 @@ async fn update_profile_changes_language(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn update_profile_changes_password(pool: PgPool) {
-    let user = common::create_test_user(&pool).await;
+    let (user, _) = common::create_test_user(&pool).await;
     service::update_profile(
         &pool,
         user.id,
@@ -130,7 +132,7 @@ async fn update_profile_changes_password(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn update_profile_fails_with_wrong_old_password(pool: PgPool) {
-    let user = common::create_test_user(&pool).await;
+    let (user, _) = common::create_test_user(&pool).await;
     let result = service::update_profile(
         &pool,
         user.id,
@@ -145,7 +147,7 @@ async fn update_profile_fails_with_wrong_old_password(pool: PgPool) {
 
 #[sqlx::test(migrations = "./migrations")]
 async fn update_profile_fails_when_username_already_taken(pool: PgPool) {
-    let user = common::create_test_user(&pool).await;
+    let (user, _) = common::create_test_user(&pool).await;
     common::create_test_user_with(&pool, "bob", "bob@example.com").await;
 
     let result = service::update_profile(&pool, user.id, Some("bob"), None, None, None).await;
