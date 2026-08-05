@@ -5,16 +5,16 @@ export default function RegisterPage() {
     <main className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
       <div className="w-full max-w-sm p-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
         <h1 className="text-title font-medium text-[var(--color-text-primary)] mb-6">
-          Créer un compte
+          Create account
         </h1>
         <RegisterForm />
         <p className="mt-4 text-body text-[var(--color-text-muted)] text-center">
-          Déjà un compte ?{" "}
+          Already have an account?{" "}
           <a
             href="/login"
             className="text-[var(--color-accent)] hover:underline"
           >
-            Se connecter
+            Sign in
           </a>
         </p>
       </div>

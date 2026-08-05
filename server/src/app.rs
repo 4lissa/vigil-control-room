@@ -8,7 +8,7 @@ use crate::state::AppState;
 
 pub fn build_router(state: AppState) -> Router {
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin(state.config.cors_origin.clone())
         .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::DELETE])
         .allow_headers(Any);
 

@@ -6,14 +6,17 @@ use crate::features::auth::{
     dto::{AuthResponse, LoginRequest, RegisterRequest, UpdateProfileRequest, UserResponse},
     service,
 };
-use crate::shared::{error::AppError, middleware::AuthUser};
+use crate::shared::{
+    error::{AppError, validation_message},
+    middleware::AuthUser,
+};
 
 pub async fn register(
     State(state): State<AppState>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<AuthResponse>), AppError> {
     req.validate()
-        .map_err(|e| AppError::ValidationError(e.to_string()))?;
+        .map_err(|e| AppError::ValidationError(validation_message(&e)))?;
 
     let (user, session) =
         service::register(&state.db, &req.username, &req.email, &req.password).await?;
@@ -32,7 +35,7 @@ pub async fn login(
     Json(req): Json<LoginRequest>,
 ) -> Result<(StatusCode, Json<AuthResponse>), AppError> {
     req.validate()
-        .map_err(|e| AppError::ValidationError(e.to_string()))?;
+        .map_err(|e| AppError::ValidationError(validation_message(&e)))?;
 
     let (user, session) = service::login(&state.db, &req.email, &req.password).await?;
 
@@ -67,7 +70,7 @@ pub async fn update_me(
     Json(req): Json<UpdateProfileRequest>,
 ) -> Result<(StatusCode, Json<UserResponse>), AppError> {
     req.validate()
-        .map_err(|e| AppError::ValidationError(e.to_string()))?;
+        .map_err(|e| AppError::ValidationError(validation_message(&e)))?;
 
     let user = service::update_profile(
         &state.db,

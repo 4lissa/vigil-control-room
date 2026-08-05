@@ -42,6 +42,12 @@ async fn register_returns_422_on_invalid_email(pool: PgPool) {
     .await;
 
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let message = body["error"]["message"].as_str().unwrap();
+    assert_eq!(message, "Email must be a valid email address");
+    assert!(!message.contains("not-an-email"));
 }
 
 #[sqlx::test(migrations = "./migrations")]

@@ -76,10 +76,10 @@ pub async fn insert_user(
     .await
     .map_err(|e| match e {
         sqlx::Error::Database(db) if db.constraint() == Some("users_username_key") => {
-            AppError::Conflict("username already taken".into())
+            AppError::Conflict("Username already taken".into())
         }
         sqlx::Error::Database(db) if db.constraint() == Some("users_email_key") => {
-            AppError::Conflict("email already taken".into())
+            AppError::Conflict("Email already taken".into())
         }
         e => {
             tracing::error!(error = ?e, %username, %email, "failed to insert user");
@@ -161,7 +161,7 @@ pub async fn update_user(
     .await
     .map_err(|e| match e {
         sqlx::Error::Database(db) if db.constraint() == Some("users_username_key") => {
-            AppError::Conflict("username already taken".into())
+            AppError::Conflict("Username already taken".into())
         }
         e => {
             tracing::error!(error = ?e, %id, "failed to update user");

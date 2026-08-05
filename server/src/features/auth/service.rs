@@ -80,7 +80,7 @@ pub async fn logout(pool: &PgPool, session_id: Uuid) -> Result<(), AppError> {
 pub async fn me(pool: &PgPool, user_id: Uuid) -> Result<User, AppError> {
     repo::find_user_by_id(pool, user_id)
         .await?
-        .ok_or(AppError::NotFound("user not found".into()))
+        .ok_or(AppError::NotFound("User not found".into()))
 }
 
 pub async fn update_profile(
@@ -95,14 +95,14 @@ pub async fn update_profile(
         Some(new_pwd) => {
             let user = repo::find_user_by_id(pool, user_id)
                 .await?
-                .ok_or(AppError::NotFound("user not found".into()))?;
+                .ok_or(AppError::NotFound("User not found".into()))?;
 
             let old_pwd = old_password.ok_or(AppError::BadRequest(
-                "current password is required to set a new one".into(),
+                "Current password is required to set a new one".into(),
             ))?;
 
             let hash = user.password_hash.as_deref().ok_or(AppError::BadRequest(
-                "cannot set password on an OAuth-only account".into(),
+                "Cannot set password on an OAuth-only account".into(),
             ))?;
 
             verify_password(old_pwd, hash).await?;
