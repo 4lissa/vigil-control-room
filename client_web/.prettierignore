@@ -1,0 +1,8 @@
+# Ignore artifacts:
+.next
+out
+build
+next-env.d.ts
+node_modules
+coverage
+pnpm-lock.yaml

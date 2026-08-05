@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: ["**"]
+  pull_request:
+    branches: [dev, main]
 
 jobs:
   server:
@@ -12,6 +14,26 @@ jobs:
       run:
         working-directory: server
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: vigil
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: vigil_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://vigil:password@localhost:5432/vigil_test
+      SERVER_PORT: 8080
+      RUST_LOG: error
+
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -20,9 +42,24 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: server
-      - run: cargo fmt --check
-      - run: cargo clippy -- -D warnings
-      - run: cargo test
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: sqlx-cli
+
+      - name: Migrate
+        run: cargo sqlx migrate run
+
+      - name: Lint
+        run: |
+          cargo fmt --check
+          cargo clippy -- -D warnings
+
+      - name: Unit tests
+        run: cargo test --lib
+
+      - name: Integration tests
+        if: github.event_name == 'pull_request'
+        run: cargo test
 
   client_web:
     name: Web client (Next.js)
@@ -40,5 +77,15 @@ jobs:
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+
+      - name: Lint
+        run: |
+          pnpm format:check
+          pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
       

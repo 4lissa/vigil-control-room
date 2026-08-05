@@ -1,8 +1,10 @@
+use axum::http::HeaderValue;
+
 #[derive(Debug, Clone)]
 pub struct Config {
     pub database_url: String,
-    pub jwt_secret: String,
     pub server_port: u16,
+    pub cors_origin: HeaderValue,
 }
 
 impl Config {
@@ -11,10 +13,14 @@ impl Config {
 
         Self {
             database_url: required_env("DATABASE_URL"),
-            jwt_secret: required_env("JWT_SECRET"),
             server_port: optional_env("SERVER_PORT", "8080")
                 .parse()
                 .expect("SERVER_PORT must be a valid port number"),
+            cors_origin: HeaderValue::from_str(&optional_env(
+                "CORS_ORIGIN",
+                "http://localhost:3000",
+            ))
+            .expect("CORS_ORIGIN must be a valid header value"),
         }
     }
 }
