@@ -4,6 +4,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::features::auth::routes as auth_routes;
 use crate::shared::middleware::require_auth;
+use crate::shared::ws::handler::ws_handler;
 use crate::state::AppState;
 
 pub fn build_router(state: AppState) -> Router {
@@ -18,6 +19,7 @@ pub fn build_router(state: AppState) -> Router {
 
     Router::new()
         .route("/health", get(health))
+        .route("/ws", get(ws_handler))
         .merge(auth_routes::public_router())
         .merge(protected)
         .layer(cors)
