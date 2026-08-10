@@ -53,8 +53,8 @@ export class WsClient {
     const token = this.getToken();
     if (!token) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
-    this.ws = new WebSocket(`${wsUrl}/ws?token=${token}`);
+    const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:8080";
+    this.ws = new WebSocket(`${WS_BASE_URL}/ws?token=${token}`);
 
     this.ws.onopen = () => {
       this.stableTimeout = setTimeout(() => {
