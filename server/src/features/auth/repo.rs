@@ -52,7 +52,7 @@ impl From<SessionRow> for Session {
 }
 
 pub async fn insert_user(
-    pool: &PgPool,
+    executor: impl sqlx::PgExecutor<'_>,
     id: Uuid,
     username: &str,
     email: &str,
@@ -72,7 +72,7 @@ pub async fn insert_user(
         password_hash,
         github_id,
     )
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
     .map_err(|e| match e {
         sqlx::Error::Database(db) if db.constraint() == Some("users_username_key") => {
@@ -173,7 +173,7 @@ pub async fn update_user(
 }
 
 pub async fn insert_session(
-    pool: &PgPool,
+    executor: impl sqlx::PgExecutor<'_>,
     id: Uuid,
     user_id: Uuid,
     expires_at: OffsetDateTime,
@@ -189,7 +189,7 @@ pub async fn insert_session(
         user_id,
         expires_at,
     )
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
     .map_err(|e| {
         tracing::error!(error = ?e, %user_id, "failed to insert session");
