@@ -126,7 +126,7 @@ async fn update_profile_changes_password(pool: PgPool) {
     .await
     .unwrap();
 
-    let result = service::login(&pool, "test@example.com", "newpassword123").await;
+    let result = service::login(&pool, "alissa@example.com", "newpassword123").await;
     assert!(result.is_ok());
 }
 
