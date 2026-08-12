@@ -35,4 +35,21 @@ describe("useAuthStore", () => {
     expect(token).toBeNull();
     expect(user).toBeNull();
   });
+
+  it("persists auth to localStorage under the vigil-auth key", () => {
+    useAuthStore.getState().setAuth("my-token", mockUser);
+
+    const stored = JSON.parse(localStorage.getItem("vigil-auth") ?? "{}");
+    expect(stored.state.token).toBe("my-token");
+    expect(stored.state.user).toEqual(mockUser);
+  });
+
+  it("clears persisted auth from localStorage on clearAuth", () => {
+    useAuthStore.getState().setAuth("my-token", mockUser);
+    useAuthStore.getState().clearAuth();
+
+    const stored = JSON.parse(localStorage.getItem("vigil-auth") ?? "{}");
+    expect(stored.state.token).toBeNull();
+    expect(stored.state.user).toBeNull();
+  });
 });

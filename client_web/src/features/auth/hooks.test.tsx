@@ -206,5 +206,8 @@ describe("useUpdateProfile", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toMatchObject({ username: "alissa_updated" });
+    expect(queryClient.getQueryData(["me"])).toMatchObject({
+      username: "alissa_updated",
+    });
   });
 });
