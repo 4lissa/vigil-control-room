@@ -1,12 +1,13 @@
 import { QueryCache, QueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@/features/auth/store";
+import { clearToken } from "@/features/auth/token";
 import { ApiError } from "./api-client";
 
 export const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
       if (error instanceof ApiError && error.status === 401) {
-        useAuthStore.getState().clearAuth();
+        clearToken();
+        queryClient.removeQueries({ queryKey: ["me"] });
       }
     },
   }),

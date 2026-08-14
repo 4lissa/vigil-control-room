@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/node";
-import { useAuthStore } from "@/features/auth/store";
+import { setToken } from "@/features/auth/token";
 import {
   useTeams,
   useTeam,
@@ -22,44 +22,33 @@ const createWrapper = () => {
     },
   });
 
-  return ({ children }: { children: React.ReactNode }) => (
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+
+  return { wrapper, queryClient };
 };
 
 beforeEach(() => {
-  useAuthStore.setState({ token: "my-session-token", user: null });
+  setToken("my-session-token");
 });
 
 describe("useTeams", () => {
-  it("fetches teams when token is present", async () => {
-    const { result } = renderHook(() => useTeams(), {
-      wrapper: createWrapper(),
-    });
+  it("fetches teams", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useTeams(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toHaveLength(1);
     expect(result.current.data![0]).toMatchObject({ name: "My Team" });
   });
-
-  it("does not fetch when token is null", async () => {
-    useAuthStore.setState({ token: null, user: null });
-
-    const { result } = renderHook(() => useTeams(), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
-    expect(result.current.data).toBeUndefined();
-  });
 });
 
 describe("useTeam", () => {
   it("fetches a single team by id", async () => {
-    const { result } = renderHook(() => useTeam("team-123"), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useTeam("team-123"), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -72,8 +61,9 @@ describe("useTeam", () => {
 
 describe("useTeamMembers", () => {
   it("fetches members for a team", async () => {
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => useTeamMembers("team-123"), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -85,16 +75,8 @@ describe("useTeamMembers", () => {
 
 describe("useCreateTeam", () => {
   it("returns the created team and invalidates the teams cache on success", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
+    const { wrapper, queryClient } = createWrapper();
     queryClient.setQueryData(["teams"], []);
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
 
     const { result } = renderHook(() => useCreateTeam(), { wrapper });
 
@@ -119,9 +101,8 @@ describe("useCreateTeam", () => {
       }),
     );
 
-    const { result } = renderHook(() => useCreateTeam(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useCreateTeam(), { wrapper });
 
     result.current.mutate({ name: "My Team" });
 
@@ -132,15 +113,14 @@ describe("useCreateTeam", () => {
 
 describe("useJoinTeam", () => {
   it("returns team on success", async () => {
-    const { result } = renderHook(() => useJoinTeam(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useJoinTeam(), { wrapper });
 
     result.current.mutate({ code: "ABC123" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toMatchObject({ id: "team-123" });
+    expect(result.current.data).toMatchObject({ team: { id: "team-123" } });
   });
 
   it("fails on invalid code", async () => {
@@ -153,9 +133,8 @@ describe("useJoinTeam", () => {
       }),
     );
 
-    const { result } = renderHook(() => useJoinTeam(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useJoinTeam(), { wrapper });
 
     result.current.mutate({ code: "WRONG" });
 
@@ -166,8 +145,9 @@ describe("useJoinTeam", () => {
 
 describe("useGenerateInviteCode", () => {
   it("returns invitation code on success", async () => {
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => useGenerateInviteCode("team-123"), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     result.current.mutate();
@@ -180,16 +160,8 @@ describe("useGenerateInviteCode", () => {
 
 describe("useTransferManager", () => {
   it("invalidates the team members cache on success", async () => {
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
+    const { wrapper, queryClient } = createWrapper();
     queryClient.setQueryData(["teams", "team-123", "members"], []);
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
 
     const { result } = renderHook(() => useTransferManager("team-123"), {
       wrapper,
@@ -215,8 +187,9 @@ describe("useTransferManager", () => {
       }),
     );
 
+    const { wrapper } = createWrapper();
     const { result } = renderHook(() => useTransferManager("team-123"), {
-      wrapper: createWrapper(),
+      wrapper,
     });
 
     result.current.mutate({ user_id: "user-999" });

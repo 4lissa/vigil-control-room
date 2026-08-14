@@ -9,8 +9,8 @@ use validator::Validate;
 use crate::AppState;
 use crate::features::teams::{
     dto::{
-        CreateTeamRequest, CreateTeamResponse, InviteCodeResponse, JoinTeamRequest,
-        TeamMemberResponse, TeamResponse, TransferManagerRequest,
+        CreateTeamRequest, InviteCodeResponse, JoinTeamRequest, TeamMemberResponse,
+        TeamMembershipResponse, TeamResponse, TransferManagerRequest,
     },
     service,
 };
@@ -23,7 +23,7 @@ pub async fn create_team(
     State(state): State<AppState>,
     auth_user: AuthUser,
     Json(req): Json<CreateTeamRequest>,
-) -> Result<(StatusCode, Json<CreateTeamResponse>), AppError> {
+) -> Result<(StatusCode, Json<TeamMembershipResponse>), AppError> {
     req.validate()
         .map_err(|e| AppError::ValidationError(validation_message(&e)))?;
 
@@ -31,7 +31,7 @@ pub async fn create_team(
 
     Ok((
         StatusCode::CREATED,
-        Json(CreateTeamResponse {
+        Json(TeamMembershipResponse {
             team: team.into(),
             member: member.into(),
         }),
@@ -88,7 +88,7 @@ pub async fn join_team(
     State(state): State<AppState>,
     auth_user: AuthUser,
     Json(req): Json<JoinTeamRequest>,
-) -> Result<(StatusCode, Json<CreateTeamResponse>), AppError> {
+) -> Result<(StatusCode, Json<TeamMembershipResponse>), AppError> {
     req.validate()
         .map_err(|e| AppError::ValidationError(validation_message(&e)))?;
 
@@ -96,7 +96,7 @@ pub async fn join_team(
 
     Ok((
         StatusCode::OK,
-        Json(CreateTeamResponse {
+        Json(TeamMembershipResponse {
             team: team.into(),
             member: member.into(),
         }),

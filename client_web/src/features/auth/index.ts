@@ -1,3 +1,4 @@
+export { getToken, setToken, clearToken } from "./token";
 export { LoginForm } from "./components/LoginForm";
 export { RegisterForm } from "./components/RegisterForm";
 export {

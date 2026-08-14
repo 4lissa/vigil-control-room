@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthStore } from "@/features/auth/store";
+import { getToken } from "@/features/auth/token";
 import {
   createTeam,
   generateInviteCode,
@@ -15,42 +15,30 @@ import {
   TransferManagerRequest,
 } from "./types";
 
-export const useTeams = () => {
-  const { token } = useAuthStore();
-
-  return useQuery({
+export const useTeams = () =>
+  useQuery({
     queryKey: ["teams"],
-    queryFn: () => getTeams(token!),
-    enabled: !!token,
+    queryFn: () => getTeams(getToken()!),
   });
-};
 
-export const useTeam = (teamId: string) => {
-  const { token } = useAuthStore();
-
-  return useQuery({
+export const useTeam = (teamId: string) =>
+  useQuery({
     queryKey: ["teams", teamId],
-    queryFn: () => getTeam(teamId, token!),
-    enabled: !!token,
+    queryFn: () => getTeam(teamId, getToken()!),
   });
-};
 
-export const useTeamMembers = (teamId: string) => {
-  const { token } = useAuthStore();
-
-  return useQuery({
+export const useTeamMembers = (teamId: string) =>
+  useQuery({
     queryKey: ["teams", teamId, "members"],
-    queryFn: () => getTeamMembers(teamId, token!),
-    enabled: !!token,
+    queryFn: () => getTeamMembers(teamId, getToken()!),
+    enabled: !!teamId,
   });
-};
 
 export const useCreateTeam = () => {
-  const { token } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: CreateTeamRequest) => createTeam(body, token!),
+    mutationFn: (body: CreateTeamRequest) => createTeam(body, getToken()!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
@@ -58,32 +46,27 @@ export const useCreateTeam = () => {
 };
 
 export const useJoinTeam = () => {
-  const { token } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: JoinTeamRequest) => joinTeam(body, token!),
+    mutationFn: (body: JoinTeamRequest) => joinTeam(body, getToken()!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };
 
-export const useGenerateInviteCode = (teamId: string) => {
-  const { token } = useAuthStore();
-
-  return useMutation({
-    mutationFn: () => generateInviteCode(teamId, token!),
+export const useGenerateInviteCode = (teamId: string) =>
+  useMutation({
+    mutationFn: () => generateInviteCode(teamId, getToken()!),
   });
-};
 
 export const useTransferManager = (teamId: string) => {
-  const { token } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (body: TransferManagerRequest) =>
-      transferManager(teamId, body, token!),
+      transferManager(teamId, body, getToken()!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teams", teamId, "members"] });
     },

@@ -31,7 +31,7 @@ export interface TeamMemberResponse {
   joined_at: string;
 }
 
-export interface CreateTeamResponse {
+export interface TeamMembershipResponse {
   team: TeamResponse;
   member: TeamMemberResponse;
 }

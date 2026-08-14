@@ -1,7 +1,7 @@
 import { apiClient } from "@/shared/lib/api-client";
 import {
   CreateTeamRequest,
-  CreateTeamResponse,
+  TeamMembershipResponse,
   InviteCodeResponse,
   JoinTeamRequest,
   TeamMemberResponse,
@@ -12,8 +12,8 @@ import {
 export const createTeam = (
   body: CreateTeamRequest,
   token: string,
-): Promise<CreateTeamResponse> =>
-  apiClient.post<CreateTeamResponse>("/teams", body, token);
+): Promise<TeamMembershipResponse> =>
+  apiClient.post<TeamMembershipResponse>("/teams", body, token);
 
 export const getTeams = (token: string): Promise<TeamResponse[]> =>
   apiClient.get<TeamResponse[]>("/teams", token);
@@ -24,8 +24,8 @@ export const getTeam = (teamId: string, token: string): Promise<TeamResponse> =>
 export const joinTeam = (
   body: JoinTeamRequest,
   token: string,
-): Promise<TeamResponse> =>
-  apiClient.post<TeamResponse>("/teams/join", body, token);
+): Promise<TeamMembershipResponse> =>
+  apiClient.post<TeamMembershipResponse>("/teams/join", body, token);
 
 export const getTeamMembers = (
   teamId: string,

@@ -68,7 +68,7 @@ impl From<TeamMember> for TeamMemberResponse {
 }
 
 #[derive(Debug, Serialize)]
-pub struct CreateTeamResponse {
+pub struct TeamMembershipResponse {
     pub team: TeamResponse,
     pub member: TeamMemberResponse,
 }

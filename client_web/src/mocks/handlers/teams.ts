@@ -36,7 +36,7 @@ export const teamsHandlers = [
   }),
 
   http.post("http://localhost:8080/teams/join", () => {
-    return HttpResponse.json(mockTeam);
+    return HttpResponse.json({ team: mockTeam, member: mockMember });
   }),
 
   http.post("http://localhost:8080/teams/:teamId/invite", () => {
