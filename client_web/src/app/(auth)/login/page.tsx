@@ -2,7 +2,7 @@ import { LoginForm } from "@/features/auth/components/LoginForm";
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[var(--color-bg-primary)]">
+    <main className="flex-1 flex items-center justify-center">
       <div className="w-full max-w-md p-8 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-secondary)]">
         <h1 className="text-title font-medium text-[var(--color-text-primary)] mb-6">
           Sign in
