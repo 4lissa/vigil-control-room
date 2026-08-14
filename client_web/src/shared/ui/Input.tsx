@@ -12,7 +12,7 @@ export const Input = ({
   className = "",
   ...props
 }: InputProps) => {
-  const inputId = id ?? label.toLowerCase().replace(/\s+/g, "-");
+  const inputId = id ?? label.toLowerCase();
 
   return (
     <div className="flex flex-col gap-1">
