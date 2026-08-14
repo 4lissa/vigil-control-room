@@ -89,6 +89,7 @@ async fn get_members_returns_200(pool: PgPool) {
     let members = body.as_array().unwrap();
     assert_eq!(members.len(), 1);
     assert_eq!(members[0]["user_id"], user.id.to_string());
+    assert_eq!(members[0]["username"], "alissa");
     assert_eq!(members[0]["role"], "manager");
 }
 
