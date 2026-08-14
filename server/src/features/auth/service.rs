@@ -22,8 +22,13 @@ pub async fn register(
 ) -> Result<(User, Session), AppError> {
     let password_hash = hash_password(password).await?;
 
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to begin transaction");
+        AppError::InternalError
+    })?;
+
     let user = repo::insert_user(
-        pool,
+        &mut *tx,
         Uuid::now_v7(),
         username,
         email,
@@ -33,12 +38,17 @@ pub async fn register(
     .await?;
 
     let session = repo::insert_session(
-        pool,
+        &mut *tx,
         Uuid::now_v7(),
         user.id,
         OffsetDateTime::now_utc() + time::Duration::days(SESSION_DURATION_DAYS),
     )
     .await?;
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to commit transaction");
+        AppError::InternalError
+    })?;
 
     Ok((user, session))
 }

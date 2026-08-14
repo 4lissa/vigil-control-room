@@ -1,59 +1,60 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMe, login, logout, register, updateProfile } from "./api";
-import { useAuthStore } from "./store";
+import { getToken, setToken, clearToken } from "./token";
 import { LoginRequest, RegisterRequest, UpdateProfileRequest } from "./types";
 
 export const useRegister = () => {
-  const { setAuth } = useAuthStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (body: RegisterRequest) => register(body),
     onSuccess: (data) => {
-      setAuth(data.token, data.user);
+      setToken(data.token);
+      queryClient.setQueryData(["me"], data.user);
     },
   });
 };
 
 export const useLogin = () => {
-  const { setAuth } = useAuthStore();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (body: LoginRequest) => login(body),
     onSuccess: (data) => {
-      setAuth(data.token, data.user);
+      setToken(data.token);
+      queryClient.setQueryData(["me"], data.user);
     },
   });
 };
 
 export const useLogout = () => {
-  const { token, clearAuth } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => logout(token!),
+    mutationFn: () => logout(getToken()!),
     onSuccess: () => {
-      clearAuth();
+      clearToken();
       queryClient.clear();
     },
   });
 };
 
-export const useMe = () => {
-  const { token } = useAuthStore();
-
-  return useQuery({
+export const useMe = () =>
+  useQuery({
     queryKey: ["me"],
-    queryFn: () => getMe(token!),
-    enabled: !!token,
+    queryFn: () => {
+      const token = getToken();
+      if (!token) return Promise.reject(new Error("No token"));
+      return getMe(token);
+    },
   });
-};
 
 export const useUpdateProfile = () => {
-  const { token } = useAuthStore();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (body: UpdateProfileRequest) => updateProfile(body, token!),
+    mutationFn: (body: UpdateProfileRequest) =>
+      updateProfile(body, getToken()!),
     onSuccess: (data) => {
       queryClient.setQueryData(["me"], data);
     },

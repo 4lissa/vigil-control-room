@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/node";
-import { useAuthStore } from "./store";
+import { getToken, setToken } from "./token";
 import {
   useLogin,
   useLogout,
@@ -20,20 +20,21 @@ const createWrapper = () => {
     },
   });
 
-  return ({ children }: { children: React.ReactNode }) => (
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}> {children} </QueryClientProvider>
   );
+
+  return { wrapper, queryClient };
 };
 
 beforeEach(() => {
-  useAuthStore.setState({ token: null, user: null });
+  localStorage.clear();
 });
 
 describe("useRegister", () => {
-  it("sets token and user in store on success", async () => {
-    const { result } = renderHook(() => useRegister(), {
-      wrapper: createWrapper(),
-    });
+  it("sets token and primes the me cache on success", async () => {
+    const { wrapper, queryClient } = createWrapper();
+    const { result } = renderHook(() => useRegister(), { wrapper });
 
     result.current.mutate({
       username: "alissa",
@@ -48,12 +49,13 @@ describe("useRegister", () => {
       user: { username: "alissa", email: "alissa@example.com" },
     });
 
-    const { token, user } = useAuthStore.getState();
-    expect(token).toBe("my-session-token");
-    expect(user).toMatchObject({ username: "alissa" });
+    expect(getToken()).toBe("my-session-token");
+    expect(queryClient.getQueryData(["me"])).toMatchObject({
+      username: "alissa",
+    });
   });
 
-  it("does not set store on failure", async () => {
+  it("does not set token or cache on failure", async () => {
     server.use(
       http.post("http://localhost:8080/register", () => {
         return HttpResponse.json(
@@ -63,9 +65,8 @@ describe("useRegister", () => {
       }),
     );
 
-    const { result } = renderHook(() => useRegister(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper, queryClient } = createWrapper();
+    const { result } = renderHook(() => useRegister(), { wrapper });
 
     result.current.mutate({
       username: "alissa",
@@ -76,17 +77,15 @@ describe("useRegister", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe("Email already taken");
 
-    const { token, user } = useAuthStore.getState();
-    expect(token).toBeNull();
-    expect(user).toBeNull();
+    expect(getToken()).toBeNull();
+    expect(queryClient.getQueryData(["me"])).toBeUndefined();
   });
 });
 
 describe("useLogin", () => {
-  it("sets token and user in store on success", async () => {
-    const { result } = renderHook(() => useLogin(), {
-      wrapper: createWrapper(),
-    });
+  it("sets token and primes the me cache on success", async () => {
+    const { wrapper, queryClient } = createWrapper();
+    const { result } = renderHook(() => useLogin(), { wrapper });
 
     result.current.mutate({
       email: "alissa@example.com",
@@ -95,12 +94,13 @@ describe("useLogin", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const { token, user } = useAuthStore.getState();
-    expect(token).toBe("my-session-token");
-    expect(user).toMatchObject({ username: "alissa" });
+    expect(getToken()).toBe("my-session-token");
+    expect(queryClient.getQueryData(["me"])).toMatchObject({
+      username: "alissa",
+    });
   });
 
-  it("does not set store on failure", async () => {
+  it("does not set token or cache on failure", async () => {
     server.use(
       http.post("http://localhost:8080/login", () => {
         return HttpResponse.json(
@@ -115,53 +115,41 @@ describe("useLogin", () => {
       }),
     );
 
-    const { result } = renderHook(() => useLogin(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper, queryClient } = createWrapper();
+    const { result } = renderHook(() => useLogin(), { wrapper });
 
     result.current.mutate({ email: "alissa@example.com", password: "wrong" });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
-    const { token, user } = useAuthStore.getState();
-    expect(token).toBeNull();
-    expect(user).toBeNull();
+    expect(getToken()).toBeNull();
+    expect(queryClient.getQueryData(["me"])).toBeUndefined();
   });
 });
 
 describe("useLogout", () => {
-  it("clears store on success", async () => {
-    useAuthStore.setState({
-      token: "my-session-token",
-      user: {
-        id: "123",
-        username: "alissa",
-        email: "alissa@example.com",
-        language: "en",
-      },
-    });
+  it("clears token and cache on success", async () => {
+    setToken("my-session-token");
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData(["me"], { username: "alissa" });
 
-    const { result } = renderHook(() => useLogout(), {
-      wrapper: createWrapper(),
-    });
+    const { result } = renderHook(() => useLogout(), { wrapper });
 
     result.current.mutate();
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    const { token, user } = useAuthStore.getState();
-    expect(token).toBeNull();
-    expect(user).toBeNull();
+    expect(getToken()).toBeNull();
+    expect(queryClient.getQueryData(["me"])).toBeUndefined();
   });
 });
 
 describe("useMe", () => {
   it("fetches current user when token is present", async () => {
-    useAuthStore.setState({ token: "my-session-token", user: null });
+    setToken("my-session-token");
 
-    const { result } = renderHook(() => useMe(), {
-      wrapper: createWrapper(),
-    });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useMe(), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
@@ -171,33 +159,19 @@ describe("useMe", () => {
     });
   });
 
-  it("does not fetch when token is null", async () => {
-    const { result } = renderHook(() => useMe(), {
-      wrapper: createWrapper(),
-    });
+  it("fails without fetching when no token is stored", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useMe(), { wrapper });
 
-    await waitFor(() => expect(result.current.fetchStatus).toBe("idle"));
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.data).toBeUndefined();
   });
 });
 
 describe("useUpdateProfile", () => {
   it("updates cache on success", async () => {
-    useAuthStore.setState({ token: "my-session-token", user: null });
-
-    const queryClient = new QueryClient({
-      defaultOptions: {
-        queries: { retry: false },
-        mutations: { retry: false },
-      },
-    });
-
-    const wrapper = ({ children }: { children: React.ReactNode }) => (
-      <QueryClientProvider client={queryClient}>
-        {" "}
-        {children}{" "}
-      </QueryClientProvider>
-    );
+    setToken("my-session-token");
+    const { wrapper, queryClient } = createWrapper();
 
     const { result } = renderHook(() => useUpdateProfile(), { wrapper });
 
@@ -206,5 +180,8 @@ describe("useUpdateProfile", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(result.current.data).toMatchObject({ username: "alissa_updated" });
+    expect(queryClient.getQueryData(["me"])).toMatchObject({
+      username: "alissa_updated",
+    });
   });
 });

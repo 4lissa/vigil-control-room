@@ -20,7 +20,7 @@ export const LoginForm = () => {
     login(
       { email, password },
       {
-        onSuccess: () => router.push("/"),
+        onSuccess: () => router.push("/incidents"),
       },
     );
   };

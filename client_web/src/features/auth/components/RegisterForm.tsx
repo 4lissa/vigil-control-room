@@ -22,7 +22,7 @@ export const RegisterForm = () => {
     register(
       { username, email, password },
       {
-        onSuccess: () => router.push("/"),
+        onSuccess: () => router.push("/incidents"),
       },
     );
   };

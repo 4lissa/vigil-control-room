@@ -1,6 +1,16 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryCache, QueryClient } from "@tanstack/react-query";
+import { clearToken } from "@/features/auth/token";
+import { ApiError } from "./api-client";
 
 export const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (error instanceof ApiError && error.status === 401) {
+        clearToken();
+        queryClient.removeQueries({ queryKey: ["me"] });
+      }
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30 * 1000,
