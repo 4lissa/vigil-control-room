@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::features::teams::model::{Role, Team, TeamBan, TeamMember};
+use crate::features::teams::model::{Role, Team, TeamBan, TeamMember, TeamMemberWithUsername};
 use crate::shared::error::AppError;
 
 #[derive(sqlx::FromRow)]
@@ -41,6 +41,29 @@ impl From<TeamMemberRow> for TeamMember {
             id: row.id,
             team_id: row.team_id,
             user_id: row.user_id,
+            role: role_from_str(&row.role),
+            joined_at: row.joined_at,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct TeamMemberWithUsernameRow {
+    id: Uuid,
+    team_id: Uuid,
+    user_id: Uuid,
+    username: String,
+    role: String,
+    joined_at: OffsetDateTime,
+}
+
+impl From<TeamMemberWithUsernameRow> for TeamMemberWithUsername {
+    fn from(row: TeamMemberWithUsernameRow) -> Self {
+        Self {
+            id: row.id,
+            team_id: row.team_id,
+            user_id: row.user_id,
+            username: row.username,
             role: role_from_str(&row.role),
             joined_at: row.joined_at,
         }
@@ -256,14 +279,15 @@ pub async fn find_member(
 pub async fn find_members_by_team_id(
     pool: &PgPool,
     team_id: Uuid,
-) -> Result<Vec<TeamMember>, AppError> {
+) -> Result<Vec<TeamMemberWithUsername>, AppError> {
     let rows = sqlx::query_as!(
-        TeamMemberRow,
+        TeamMemberWithUsernameRow,
         r#"
-        SELECT id, team_id, user_id, role::TEXT as "role!", joined_at
-        FROM team_members
-        WHERE team_id = $1
-        ORDER BY joined_at ASC
+        SELECT tm.id, tm.team_id, tm.user_id, u.username, tm.role::TEXT as "role!", tm.joined_at
+        FROM team_members tm
+        JOIN users u ON u.id = tm.user_id
+        WHERE tm.team_id = $1
+        ORDER BY tm.joined_at ASC
         "#,
         team_id,
     )

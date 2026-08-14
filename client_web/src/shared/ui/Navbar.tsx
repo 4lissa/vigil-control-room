@@ -192,11 +192,7 @@ export const Navbar = () => {
                     {user?.email}
                   </p>
                 </div>
-                <Link
-                  href="/me"
-                  onClick={close}
-                  className={menuItemClass()}
-                >
+                <Link href="/me" onClick={close} className={menuItemClass()}>
                   <User size={14} />
                   Profile
                 </Link>

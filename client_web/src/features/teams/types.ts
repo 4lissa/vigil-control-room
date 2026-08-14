@@ -27,6 +27,7 @@ export interface TeamMemberResponse {
   id: string;
   team_id: string;
   user_id: string;
+  username?: string;
   role: TeamRole;
   joined_at: string;
 }

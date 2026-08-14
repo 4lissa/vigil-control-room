@@ -3,7 +3,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::features::teams::model::{Role, Team, TeamMember};
+use crate::features::teams::model::{Role, Team, TeamMember, TeamMemberWithUsername};
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateTeamRequest {
@@ -51,6 +51,7 @@ pub struct TeamMemberResponse {
     pub id: Uuid,
     pub team_id: Uuid,
     pub user_id: Uuid,
+    pub username: Option<String>,
     pub role: String,
     pub joined_at: OffsetDateTime,
 }
@@ -61,6 +62,20 @@ impl From<TeamMember> for TeamMemberResponse {
             id: member.id,
             team_id: member.team_id,
             user_id: member.user_id,
+            username: None,
+            role: role_to_string(&member.role),
+            joined_at: member.joined_at,
+        }
+    }
+}
+
+impl From<TeamMemberWithUsername> for TeamMemberResponse {
+    fn from(member: TeamMemberWithUsername) -> Self {
+        Self {
+            id: member.id,
+            team_id: member.team_id,
+            user_id: member.user_id,
+            username: Some(member.username),
             role: role_to_string(&member.role),
             joined_at: member.joined_at,
         }

@@ -27,6 +27,16 @@ pub struct TeamMember {
 }
 
 #[derive(Debug, Clone)]
+pub struct TeamMemberWithUsername {
+    pub id: Uuid,
+    pub team_id: Uuid,
+    pub user_id: Uuid,
+    pub username: String,
+    pub role: Role,
+    pub joined_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone)]
 pub struct TeamBan {
     pub id: Uuid,
     pub team_id: Uuid,

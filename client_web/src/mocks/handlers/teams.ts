@@ -15,6 +15,11 @@ const mockMember = {
   joined_at: "2026-08-12T00:00:00Z",
 };
 
+const mockMemberWithUsername = {
+  ...mockMember,
+  username: "alissa",
+};
+
 export const teamsHandlers = [
   http.get("http://localhost:8080/teams", () => {
     return HttpResponse.json([mockTeam]);
@@ -25,7 +30,7 @@ export const teamsHandlers = [
   }),
 
   http.get("http://localhost:8080/teams/:teamId/members", () => {
-    return HttpResponse.json([mockMember]);
+    return HttpResponse.json([mockMemberWithUsername]);
   }),
 
   http.post("http://localhost:8080/teams", () => {

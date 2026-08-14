@@ -4,7 +4,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::features::teams::{
-    model::{Role, Team, TeamMember},
+    model::{Role, Team, TeamMember, TeamMemberWithUsername},
     repo,
 };
 use crate::shared::error::AppError;
@@ -88,7 +88,7 @@ pub async fn get_members(
     pool: &PgPool,
     team_id: Uuid,
     requester_id: Uuid,
-) -> Result<Vec<TeamMember>, AppError> {
+) -> Result<Vec<TeamMemberWithUsername>, AppError> {
     require_member(pool, team_id, requester_id).await?;
     repo::find_members_by_team_id(pool, team_id).await
 }

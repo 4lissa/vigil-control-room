@@ -1,26 +1,30 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useLogin } from "../hooks";
+import { useJoinTeam } from "../hooks";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 
-export const LoginForm = () => {
+interface JoinTeamFormProps {
+  onSuccess: () => void;
+}
+
+export const JoinTeamForm = ({ onSuccess }: JoinTeamFormProps) => {
   const router = useRouter();
-  const { mutate: login, isPending, error } = useLogin();
+  const { mutate: joinTeam, isPending, error } = useJoinTeam();
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     const form = e.currentTarget;
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value;
-    const password = (form.elements.namedItem("password") as HTMLInputElement)
-      .value;
+    const code = (form.elements.namedItem("code") as HTMLInputElement).value;
 
-    login(
-      { email, password },
+    joinTeam(
+      { code },
       {
-        onSuccess: () => router.push("/incidents"),
+        onSuccess: (data) => {
+          onSuccess();
+          router.push(`/teams/${data.team.id}/incidents`);
+        },
       },
     );
   };
@@ -32,15 +36,14 @@ export const LoginForm = () => {
           {error.message}
         </div>
       )}
-      <Input name="email" type="email" label="Email" required />
-      <Input name="password" type="password" label="Password" required />
+      <Input name="code" label="Invitation code" required />
       <Button
         type="submit"
         variant="primary"
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Sign in
+        Join team
       </Button>
     </form>
   );
