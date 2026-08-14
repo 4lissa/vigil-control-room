@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Bell, Mail, Settings, User, LogOut, Check, Plus } from "lucide-react";
-import { useTeams, useTeamMembers } from "@/features/teams";
+import { useTeams, useTeamMembers, useDefaultTeamId } from "@/features/teams";
 import { useLogout, useMe } from "@/features/auth";
 import { Dialog } from "./Dialog";
 import { Dropdown } from "./Dropdown";
@@ -19,7 +19,8 @@ export const Navbar = () => {
   const { data: teams } = useTeams();
   const { mutate: logout } = useLogout();
 
-  const currentTeamId = params.teamId ?? teams?.[0]?.id;
+  const defaultTeamId = useDefaultTeamId();
+  const currentTeamId = params.teamId ?? defaultTeamId;
   const activeTeam = teams?.find((t) => t.id === currentTeamId);
   const { data: activeTeamMembers } = useTeamMembers(activeTeam?.id ?? "");
 
@@ -192,7 +193,11 @@ export const Navbar = () => {
                     {user?.email}
                   </p>
                 </div>
-                <Link href="/me" onClick={close} className={menuItemClass()}>
+                <Link
+                  href="/profile"
+                  onClick={close}
+                  className={menuItemClass()}
+                >
                   <User size={14} />
                   Profile
                 </Link>

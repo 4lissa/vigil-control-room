@@ -2,18 +2,17 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useTeams } from "@/features/teams";
+import { useDefaultTeamId } from "@/features/teams";
 
 export default function IncidentsPage() {
   const router = useRouter();
-  const { data: teams } = useTeams();
-  const firstTeam = teams?.[0];
+  const defaultTeamId = useDefaultTeamId();
 
   useEffect(() => {
-    if (firstTeam) router.replace(`/teams/${firstTeam.id}/incidents`);
-  }, [firstTeam, router]);
+    if (defaultTeamId) router.replace(`/teams/${defaultTeamId}/incidents`);
+  }, [defaultTeamId, router]);
 
-  if (firstTeam) return null;
+  if (defaultTeamId) return null;
 
   return (
     <div className="flex flex-col items-center justify-center h-full gap-4 text-center">

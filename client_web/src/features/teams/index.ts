@@ -1,3 +1,4 @@
+export { setLastTeamId } from "./lastTeamId";
 export {
   useTeam,
   useTeamMembers,
@@ -6,6 +7,7 @@ export {
   useJoinTeam,
   useGenerateInviteCode,
   useTransferManager,
+  useDefaultTeamId,
 } from "./hooks";
 export type {
   TeamRole,

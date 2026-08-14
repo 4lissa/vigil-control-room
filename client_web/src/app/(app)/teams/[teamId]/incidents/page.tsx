@@ -1,7 +1,7 @@
 "use client";
 
-import { use } from "react";
-import { useTeam } from "@/features/teams";
+import { use, useEffect } from "react";
+import { useTeam, setLastTeamId } from "@/features/teams";
 
 export default function TeamIncidentsPage({
   params,
@@ -10,6 +10,10 @@ export default function TeamIncidentsPage({
 }) {
   const { teamId } = use(params);
   const { data: team, isLoading } = useTeam(teamId);
+
+  useEffect(() => {
+    setLastTeamId(teamId);
+  }, [teamId]);
 
   if (isLoading) {
     return (

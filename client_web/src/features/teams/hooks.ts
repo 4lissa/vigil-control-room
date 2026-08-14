@@ -9,6 +9,7 @@ import {
   joinTeam,
   transferManager,
 } from "./api";
+import { getDefaultTeamId } from "./lastTeamId";
 import {
   CreateTeamRequest,
   JoinTeamRequest,
@@ -20,6 +21,11 @@ export const useTeams = () =>
     queryKey: ["teams"],
     queryFn: () => getTeams(getToken()!),
   });
+
+export const useDefaultTeamId = () => {
+  const { data: teams } = useTeams();
+  return getDefaultTeamId(teams);
+};
 
 export const useTeam = (teamId: string) =>
   useQuery({

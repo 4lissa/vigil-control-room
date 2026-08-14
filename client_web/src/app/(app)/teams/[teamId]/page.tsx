@@ -1,8 +1,8 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect } from "react";
 import { useMe } from "@/features/auth";
-import { useTeam, useTeamMembers } from "@/features/teams";
+import { useTeam, useTeamMembers, setLastTeamId } from "@/features/teams";
 import { TeamMemberList } from "@/features/teams/components/TeamMemberList";
 import { ManagerActions } from "@/features/teams/components/ManagerActions";
 
@@ -15,6 +15,10 @@ export default function TeamPage({
   const { data: user } = useMe();
   const { data: team, isLoading: teamLoading } = useTeam(teamId);
   const { data: members, isLoading: membersLoading } = useTeamMembers(teamId);
+
+  useEffect(() => {
+    setLastTeamId(teamId);
+  }, [teamId]);
 
   if (teamLoading || membersLoading) {
     return (
