@@ -19,6 +19,7 @@ use crate::shared::error::AppError;
 pub struct AuthUser {
     pub user_id: Uuid,
     pub session_id: Uuid,
+    pub username: String,
 }
 
 impl FromRequestParts<AppState> for AuthUser {
@@ -48,7 +49,7 @@ pub async fn require_auth(
 
     let session_id = Uuid::parse_str(bearer.token()).map_err(|_| AppError::Unauthorized)?;
 
-    let session = repo::find_session_by_id(&state.db, session_id)
+    let session = repo::find_session_with_username(&state.db, session_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
@@ -59,6 +60,7 @@ pub async fn require_auth(
     req.extensions_mut().insert(AuthUser {
         user_id: session.user_id,
         session_id: session.id,
+        username: session.username,
     });
 
     Ok(next.run(req).await)

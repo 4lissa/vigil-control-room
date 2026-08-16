@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::features::auth::model::{Session, User};
+use crate::features::auth::model::{Session, SessionWithUsername, User};
 use crate::shared::error::AppError;
 
 #[derive(sqlx::FromRow)]
@@ -207,6 +207,49 @@ pub async fn find_session_by_id(pool: &PgPool, id: Uuid) -> Result<Option<Sessio
             tracing::error!(error = ?e, %id, "failed to find session by id");
             AppError::InternalError
         })?;
+
+    Ok(row.map(Into::into))
+}
+
+#[derive(sqlx::FromRow)]
+struct SessionWithUsernameRow {
+    id: Uuid,
+    user_id: Uuid,
+    username: String,
+    expires_at: OffsetDateTime,
+}
+
+impl From<SessionWithUsernameRow> for SessionWithUsername {
+    fn from(row: SessionWithUsernameRow) -> Self {
+        Self {
+            id: row.id,
+            user_id: row.user_id,
+            username: row.username,
+            expires_at: row.expires_at,
+        }
+    }
+}
+
+pub async fn find_session_with_username(
+    pool: &PgPool,
+    id: Uuid,
+) -> Result<Option<SessionWithUsername>, AppError> {
+    let row = sqlx::query_as!(
+        SessionWithUsernameRow,
+        r#"
+        SELECT s.id, s.user_id, u.username, s.expires_at
+        FROM sessions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.id = $1
+        "#,
+        id,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %id, "failed to find session with username by id");
+        AppError::InternalError
+    })?;
 
     Ok(row.map(Into::into))
 }

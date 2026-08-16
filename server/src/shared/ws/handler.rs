@@ -8,9 +8,13 @@ use axum::{
     response::Response,
 };
 use futures::{SinkExt, StreamExt};
+use sqlx::PgPool;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
+use crate::features::auth::repo as auth_repo;
+use crate::features::incidents::repo as incidents_repo;
+use crate::features::teams::repo as teams_repo;
 use crate::shared::error::AppError;
 use crate::shared::ws::{
     event::{ClientMessage, WsEvent},
@@ -28,28 +32,52 @@ pub async fn ws_handler(
         .and_then(|t| Uuid::parse_str(t).ok())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = sqlx::query!(
-        "SELECT s.user_id, u.username FROM sessions s
-         JOIN users u ON u.id = s.user_id
-         WHERE s.id = $1 AND s.expires_at > now()",
-        token
-    )
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|_| AppError::Unauthorized)?
-    .ok_or(AppError::Unauthorized)?;
+    let session = auth_repo::find_session_with_username(&state.db, token)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+    if session.is_expired() {
+        return Err(AppError::Unauthorized);
+    }
+
+    let team_ids = teams_repo::find_teams_by_user_id(&state.db, session.user_id)
+        .await?
+        .into_iter()
+        .map(|team| team.id)
+        .collect();
 
     let username = session.username;
     let hub = state.hub.clone();
+    let db = state.db.clone();
 
-    Ok(ws.on_upgrade(move |socket| handle_socket(socket, hub, username)))
+    Ok(ws.on_upgrade(move |socket| {
+        handle_socket(socket, hub, db, session.user_id, username, team_ids)
+    }))
 }
 
-async fn handle_socket(socket: WebSocket, hub: Hub, username: String) {
+async fn can_watch_incident(db: &PgPool, user_id: Uuid, incident_id: Uuid) -> bool {
+    let Ok(Some(incident)) = incidents_repo::find_incident_by_id(db, incident_id).await else {
+        return false;
+    };
+
+    matches!(
+        teams_repo::find_member(db, incident.team_id, user_id).await,
+        Ok(Some(_))
+    )
+}
+
+async fn handle_socket(
+    socket: WebSocket,
+    hub: Hub,
+    db: PgPool,
+    user_id: Uuid,
+    username: String,
+    team_ids: Vec<Uuid>,
+) {
     let client_id = Uuid::now_v7();
     let (tx, mut rx) = mpsc::unbounded_channel();
 
-    hub.connect(client_id, tx).await;
+    hub.connect(client_id, tx, username.clone(), team_ids).await;
 
     let (mut sink, mut stream) = socket.split();
 
@@ -66,10 +94,40 @@ async fn handle_socket(socket: WebSocket, hub: Hub, username: String) {
         while let Some(Ok(msg)) = stream.next().await {
             match msg {
                 Message::Text(text) => {
-                    if let Ok(event) = serde_json::from_str::<ClientMessage>(&text)
-                        && matches!(event, ClientMessage::Ping)
-                    {
-                        hub_clone.send_to(client_id, &WsEvent::Pong).await;
+                    let Ok(event) = serde_json::from_str::<ClientMessage>(&text) else {
+                        continue;
+                    };
+                    match event {
+                        ClientMessage::Ping => {
+                            hub_clone.send_to(client_id, &WsEvent::Pong).await;
+                        }
+                        ClientMessage::Watch { incident_id } => {
+                            if !can_watch_incident(&db, user_id, incident_id).await {
+                                continue;
+                            }
+                            let watchers = hub_clone.watch_incident(client_id, incident_id).await;
+                            hub_clone
+                                .broadcast_to_watchers(
+                                    incident_id,
+                                    &WsEvent::PresenceUpdate {
+                                        incident_id,
+                                        watchers,
+                                    },
+                                )
+                                .await;
+                        }
+                        ClientMessage::Unwatch { incident_id } => {
+                            let watchers = hub_clone.unwatch_incident(client_id, incident_id).await;
+                            hub_clone
+                                .broadcast_to_watchers(
+                                    incident_id,
+                                    &WsEvent::PresenceUpdate {
+                                        incident_id,
+                                        watchers,
+                                    },
+                                )
+                                .await;
+                        }
                     }
                 }
                 Message::Close(_) => break,

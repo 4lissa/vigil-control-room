@@ -21,7 +21,21 @@ pub struct Session {
     pub expires_at: OffsetDateTime,
 }
 
+#[derive(Debug, Clone)]
+pub struct SessionWithUsername {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub username: String,
+    pub expires_at: OffsetDateTime,
+}
+
 impl Session {
+    pub fn is_expired(&self) -> bool {
+        self.expires_at < OffsetDateTime::now_utc()
+    }
+}
+
+impl SessionWithUsername {
     pub fn is_expired(&self) -> bool {
         self.expires_at < OffsetDateTime::now_utc()
     }

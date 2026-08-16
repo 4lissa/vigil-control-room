@@ -3,6 +3,7 @@ use axum::{Router, middleware, routing::get};
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::features::auth::routes as auth_routes;
+use crate::features::incidents::routes as incidents_routes;
 use crate::features::teams::routes as teams_routes;
 use crate::shared::middleware::require_auth;
 use crate::shared::ws::handler::ws_handler;
@@ -17,6 +18,7 @@ pub fn build_router(state: AppState) -> Router {
     let protected = Router::new()
         .merge(auth_routes::protected_router())
         .merge(teams_routes::router())
+        .merge(incidents_routes::router())
         .layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
     Router::new()
