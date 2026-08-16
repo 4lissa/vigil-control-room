@@ -37,6 +37,15 @@ pub enum WsEvent {
         incident_id: Uuid,
         watchers: Vec<String>,
     },
+    ReleaseStepValidated {
+        release_id: Uuid,
+        step: String,
+        by: String,
+    },
+    ReleaseStateChanged {
+        release_id: Uuid,
+        new_state: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
