@@ -10,6 +10,7 @@ import {
   useIncidentRealtime,
   useTimelineEntries,
 } from "@/features/incidents";
+import { useRelease } from "@/features/releases";
 import { StateBadge } from "@/features/incidents/components/StateBadge";
 import { SeverityBadge } from "@/features/incidents/components/SeverityBadge";
 import { IncidentActions } from "@/features/incidents/components/IncidentActions";
@@ -25,6 +26,10 @@ export default function IncidentDetailPage({
   const { data: members } = useTeamMembers(teamId);
   const { data: incident, isLoading } = useIncident(teamId, incidentId);
   const { data: timeline } = useTimelineEntries(teamId, incidentId);
+  const { data: linkedRelease } = useRelease(
+    teamId,
+    incident?.release_id ?? "",
+  );
   const { watchers } = useIncidentRealtime(teamId, incidentId);
 
   if (isLoading) {
@@ -72,6 +77,17 @@ export default function IncidentDetailPage({
           Assigned to:{" "}
           {assignedMember?.username ?? incident.assigned_to ?? "Unassigned"}
         </p>
+        {linkedRelease && (
+          <p className="text-caption text-[var(--color-text-muted)]">
+            Linked release:{" "}
+            <Link
+              href={`/teams/${teamId}/releases/${linkedRelease.id}`}
+              className="text-[var(--color-accent)] hover:underline"
+            >
+              {linkedRelease.name}
+            </Link>
+          </p>
+        )}
         {watchers.length > 0 && (
           <p className="flex items-center gap-1 text-caption text-[var(--color-text-muted)]">
             <Eye size={12} />
