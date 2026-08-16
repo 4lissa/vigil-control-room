@@ -212,25 +212,6 @@ pub async fn find_steps_by_release_id(
     Ok(rows.into_iter().map(Into::into).collect())
 }
 
-pub async fn find_step_by_id(
-    pool: &PgPool,
-    step_id: Uuid,
-) -> Result<Option<ReleaseStep>, AppError> {
-    let row = sqlx::query_as!(
-        ReleaseStepRow,
-        r#"SELECT * FROM release_steps WHERE id = $1"#,
-        step_id,
-    )
-    .fetch_optional(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!(error = ?e, %step_id, "failed to find release step by id");
-        AppError::InternalError
-    })?;
-
-    Ok(row.map(Into::into))
-}
-
 pub async fn update_release_state(
     executor: impl sqlx::PgExecutor<'_>,
     release_id: Uuid,

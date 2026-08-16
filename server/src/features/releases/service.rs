@@ -2,6 +2,7 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::features::incidents::repo as incidents_repo;
 use crate::features::releases::model::{Release, ReleaseState, ReleaseStep};
 use crate::features::releases::repo;
 use crate::features::teams::repo as teams_repo;
@@ -99,6 +100,12 @@ pub async fn validate_step(
     if release.state != ReleaseState::Created && release.state != ReleaseState::InProgress {
         return Err(AppError::Conflict(
             "Only a created or in-progress release can have its steps validated".into(),
+        ));
+    }
+
+    if incidents_repo::has_unresolved_incidents_for_release(pool, release_id).await? {
+        return Err(AppError::Conflict(
+            "This release has an unresolved incident linked to it".into(),
         ));
     }
 

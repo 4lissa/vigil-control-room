@@ -26,6 +26,17 @@ pub async fn create_release(
         service::create_release(&state.db, team_id, auth_user.user_id, &req.name, &req.steps)
             .await?;
 
+    state
+        .hub
+        .broadcast_to_team(
+            team_id,
+            &WsEvent::ReleaseStateChanged {
+                release_id: release.id,
+                new_state: release.state.as_str().into(),
+            },
+        )
+        .await;
+
     Ok((StatusCode::CREATED, Json(release.into())))
 }
 

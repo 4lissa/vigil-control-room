@@ -214,6 +214,37 @@ async fn create_incident_does_not_block_release_that_is_not_in_progress(pool: Pg
 }
 
 #[sqlx::test(migrations = "./migrations")]
+async fn validate_step_fails_with_unresolved_incident_even_if_release_not_blocked(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+
+    let release =
+        service::create_release(&pool, team.id, user.id, "v1.0.0", &["build".to_string()])
+            .await
+            .unwrap();
+
+    incidents_service::create_incident(
+        &pool,
+        team.id,
+        user.id,
+        "DB down",
+        "",
+        Severity::High,
+        Some(release.id),
+    )
+    .await
+    .unwrap();
+
+    let steps = service::get_release_steps(&pool, team.id, release.id, user.id)
+        .await
+        .unwrap();
+
+    let result = service::validate_step(&pool, team.id, release.id, steps[0].id, user.id).await;
+
+    assert!(matches!(result, Err(AppError::Conflict(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
 async fn resolving_last_active_incident_unblocks_release(pool: PgPool) {
     let (user, _) = common::create_test_user(&pool).await;
     let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;

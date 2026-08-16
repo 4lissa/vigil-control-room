@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use validator::Validate;
+use validator::{Validate, ValidationError};
 
 use crate::features::releases::model::{Release, ReleaseState, ReleaseStep};
 
@@ -8,8 +8,20 @@ use crate::features::releases::model::{Release, ReleaseState, ReleaseStep};
 pub struct CreateReleaseRequest {
     #[validate(length(min = 1, max = 200))]
     pub name: String,
-    #[validate(length(min = 1))]
+    #[validate(length(min = 1), custom(function = "validate_step_names"))]
     pub steps: Vec<String>,
+}
+
+fn validate_step_names(steps: &[String]) -> Result<(), ValidationError> {
+    let all_valid = steps
+        .iter()
+        .all(|step| !step.trim().is_empty() && step.len() <= 100);
+
+    if all_valid {
+        Ok(())
+    } else {
+        Err(ValidationError::new("invalid_step_name"))
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -119,6 +131,24 @@ mod tests {
         let req = CreateReleaseRequest {
             name: "v1.0.0".into(),
             steps: vec![],
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn create_release_request_rejects_blank_step_name() {
+        let req = CreateReleaseRequest {
+            name: "v1.0.0".into(),
+            steps: vec!["build".into(), "  ".into()],
+        };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn create_release_request_rejects_step_name_too_long() {
+        let req = CreateReleaseRequest {
+            name: "v1.0.0".into(),
+            steps: vec!["a".repeat(101)],
         };
         assert!(req.validate().is_err());
     }
