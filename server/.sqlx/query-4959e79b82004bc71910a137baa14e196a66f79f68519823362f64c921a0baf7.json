@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE incidents\n        SET assigned_to = $2\n        WHERE id = $1\n        RETURNING\n            id, team_id, title, description,\n            state::TEXT as \"state!\",\n            severity::TEXT as \"severity!\",\n            created_by, assigned_to, created_at, resolved_at\n        ",
+  "query": "\n        UPDATE incidents\n        SET state = $2::incident_state, resolved_at = $3\n        WHERE id = $1\n        RETURNING\n            id, team_id, title, description,\n            state::TEXT as \"state!\",\n            severity::TEXT as \"severity!\",\n            created_by, assigned_to, release_id, created_at, resolved_at\n        ",
   "describe": {
     "columns": [
       {
@@ -83,6 +83,17 @@
       },
       {
         "ordinal": 8,
+        "name": "release_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "incidents",
+            "name": "release_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -93,7 +104,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "resolved_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -107,7 +118,20 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        {
+          "Custom": {
+            "name": "incident_state",
+            "kind": {
+              "Enum": [
+                "open",
+                "acknowledged",
+                "escalated",
+                "resolved"
+              ]
+            }
+          }
+        },
+        "Timestamptz"
       ]
     },
     "nullable": [
@@ -119,9 +143,10 @@
       null,
       true,
       true,
+      true,
       false,
       true
     ]
   },
-  "hash": "dc940be7e51850078e62d1dfe2870d0de681977eb8fbc8fb97ac4c5357ce4347"
+  "hash": "4959e79b82004bc71910a137baa14e196a66f79f68519823362f64c921a0baf7"
 }
