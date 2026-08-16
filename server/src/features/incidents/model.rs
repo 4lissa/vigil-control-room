@@ -62,8 +62,8 @@ impl Incident {
 
     pub fn escalate(&self) -> Result<IncidentState, &'static str> {
         match self.state {
-            IncidentState::Acknowledged => Ok(IncidentState::Escalated),
-            _ => Err("Only an acknowledged incident can be escalated"),
+            IncidentState::Acknowledged | IncidentState::Escalated => Ok(IncidentState::Escalated),
+            _ => Err("Only an acknowledged or escalated incident can be escalated"),
         }
     }
 
@@ -132,8 +132,20 @@ mod tests {
     }
 
     #[test]
+    fn escalated_incident_can_be_escalated_again() {
+        let incident = make_incident(IncidentState::Escalated);
+        assert_eq!(incident.escalate(), Ok(IncidentState::Escalated));
+    }
+
+    #[test]
     fn open_incident_cannot_be_escalated() {
         let incident = make_incident(IncidentState::Open);
+        assert!(incident.escalate().is_err());
+    }
+
+    #[test]
+    fn resolved_incident_cannot_be_escalated() {
+        let incident = make_incident(IncidentState::Resolved);
         assert!(incident.escalate().is_err());
     }
 

@@ -1,3 +1,45 @@
-export type WsEvent = { type: "pong" };
+export type WsEvent =
+  | { type: "pong" }
+  | {
+      type: "incident_state_changed";
+      incident_id: string;
+      new_state: string;
+      by: string;
+    }
+  | {
+      type: "incident_escalated";
+      incident_id: string;
+      new_severity: string;
+      by: string;
+    }
+  | {
+      type: "incident_assigned";
+      incident_id: string;
+      assigned_to: string | null;
+      by: string;
+    }
+  | {
+      type: "timeline_entry_added";
+      incident_id: string;
+      entry_id: string;
+      author: string;
+      content: string;
+      created_at: number;
+    }
+  | {
+      type: "timeline_entry_edited";
+      incident_id: string;
+      entry_id: string;
+      new_content: string;
+      edited_at: number;
+    }
+  | {
+      type: "presence_update";
+      incident_id: string;
+      watchers: string[];
+    };
 
-export type ClientMessage = { type: "ping" };
+export type ClientMessage =
+  | { type: "ping" }
+  | { type: "watch"; incident_id: string }
+  | { type: "unwatch"; incident_id: string };
