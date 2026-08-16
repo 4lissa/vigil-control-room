@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useCreateIncident } from "../hooks";
 import { Severity } from "../types";
+import { useReleases } from "@/features/releases";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 
@@ -16,11 +17,17 @@ export const CreateIncidentForm = ({
   onSuccess,
 }: CreateIncidentFormProps) => {
   const [severity, setSeverity] = useState<Severity>("medium");
+  const [releaseId, setReleaseId] = useState("");
   const {
     mutate: createIncident,
     isPending,
     error,
   } = useCreateIncident(teamId);
+  const { data: releases } = useReleases(teamId);
+
+  const linkableReleases = (releases ?? []).filter(
+    (release) => release.state === "created" || release.state === "in_progress",
+  );
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,7 +38,12 @@ export const CreateIncidentForm = ({
     ).value;
 
     createIncident(
-      { title, description: description || undefined, severity },
+      {
+        title,
+        description: description || undefined,
+        severity,
+        release_id: releaseId || undefined,
+      },
       { onSuccess },
     );
   };
@@ -77,6 +89,29 @@ export const CreateIncidentForm = ({
           <option value="critical">Critical</option>
         </select>
       </div>
+      {linkableReleases.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="release"
+            className="text-body font-medium text-[var(--color-text-secondary)]"
+          >
+            Link to release (optional)
+          </label>
+          <select
+            id="release"
+            value={releaseId}
+            onChange={(e) => setReleaseId(e.target.value)}
+            className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
+          >
+            <option value="">None</option>
+            {linkableReleases.map((release) => (
+              <option key={release.id} value={release.id}>
+                {release.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <Button
         type="submit"
         variant="primary"

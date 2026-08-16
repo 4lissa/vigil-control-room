@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id, team_id, title, description,\n            state::TEXT as \"state!\",\n            severity::TEXT as \"severity!\",\n            created_by, assigned_to, created_at, resolved_at\n        FROM incidents\n        WHERE id = $1\n        ",
+  "query": "\n        SELECT\n            id, team_id, title, description,\n            state::TEXT as \"state!\",\n            severity::TEXT as \"severity!\",\n            created_by, assigned_to, release_id, created_at, resolved_at\n        FROM incidents\n        WHERE id = $1\n        ",
   "describe": {
     "columns": [
       {
@@ -83,6 +83,17 @@
       },
       {
         "ordinal": 8,
+        "name": "release_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "incidents",
+            "name": "release_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -93,7 +104,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "resolved_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -118,9 +129,10 @@
       null,
       true,
       true,
+      true,
       false,
       true
     ]
   },
-  "hash": "36badbf90e54b590dd31fe53d96e156838ddb0d2aa9e768acf946a61d632406d"
+  "hash": "4f6c6c5d6e3091d547fc1222dad2bcd30cb77a7b2d52173ae234f5394a35d3fa"
 }

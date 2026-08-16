@@ -27,6 +27,7 @@ pub struct Incident {
     pub severity: Severity,
     pub created_by: Option<Uuid>,
     pub assigned_to: Option<Uuid>,
+    pub release_id: Option<Uuid>,
     pub created_at: OffsetDateTime,
     pub resolved_at: Option<OffsetDateTime>,
 }
@@ -97,6 +98,7 @@ mod tests {
             severity: Severity::High,
             created_by: None,
             assigned_to: None,
+            release_id: None,
             created_at: OffsetDateTime::now_utc(),
             resolved_at: None,
         }

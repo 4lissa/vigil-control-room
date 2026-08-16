@@ -2,6 +2,7 @@ export interface CreateIncidentRequest {
   title: string;
   description?: string;
   severity: Severity;
+  release_id?: string;
 }
 
 export interface EscalateIncidentRequest {
@@ -33,6 +34,7 @@ export interface IncidentResponse {
   severity: Severity;
   created_by: string | null;
   assigned_to: string | null;
+  release_id: string | null;
   created_at: number;
   resolved_at: number | null;
 }

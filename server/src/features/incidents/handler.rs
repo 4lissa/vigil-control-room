@@ -27,13 +27,14 @@ pub async fn create_incident(
 
     let description = req.description.unwrap_or_default();
 
-    let incident = service::create_incident(
+    let (incident, blocked_release_state) = service::create_incident(
         &state.db,
         team_id,
         auth_user.user_id,
         &req.title,
         &description,
         req.severity.into(),
+        req.release_id,
     )
     .await?;
 
@@ -48,6 +49,19 @@ pub async fn create_incident(
             },
         )
         .await;
+
+    if let Some(release_state) = blocked_release_state {
+        state
+            .hub
+            .broadcast_to_team(
+                team_id,
+                &WsEvent::ReleaseStateChanged {
+                    release_id: incident.release_id.unwrap(),
+                    new_state: release_state.as_str().into(),
+                },
+            )
+            .await;
+    }
 
     Ok((StatusCode::CREATED, Json(incident.into())))
 }
@@ -130,7 +144,7 @@ pub async fn resolve_incident(
     auth_user: AuthUser,
     Path((team_id, incident_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<IncidentResponse>, AppError> {
-    let incident =
+    let (incident, unblocked_release_state) =
         service::resolve_incident(&state.db, team_id, incident_id, auth_user.user_id).await?;
 
     state
@@ -144,6 +158,19 @@ pub async fn resolve_incident(
             },
         )
         .await;
+
+    if let Some(release_state) = unblocked_release_state {
+        state
+            .hub
+            .broadcast_to_team(
+                team_id,
+                &WsEvent::ReleaseStateChanged {
+                    release_id: incident.release_id.unwrap(),
+                    new_state: release_state.as_str().into(),
+                },
+            )
+            .await;
+    }
 
     Ok(Json(incident.into()))
 }

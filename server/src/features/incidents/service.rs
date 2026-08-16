@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::features::incidents::model::{Incident, IncidentState, Severity, TimelineEntry};
 use crate::features::incidents::repo;
+use crate::features::releases::model::ReleaseState;
+use crate::features::releases::repo as releases_repo;
 use crate::features::teams::repo as teams_repo;
 use crate::shared::error::AppError;
 
@@ -14,7 +16,8 @@ pub async fn create_incident(
     title: &str,
     description: &str,
     severity: Severity,
-) -> Result<Incident, AppError> {
+    release_id: Option<Uuid>,
+) -> Result<(Incident, Option<ReleaseState>), AppError> {
     let member = require_member(pool, team_id, requester_id).await?;
 
     if !member.role.can_create_incident() {
@@ -23,16 +26,45 @@ pub async fn create_incident(
         ));
     }
 
-    repo::insert_incident(
-        pool,
+    let release = match release_id {
+        Some(release_id) => Some(require_release(pool, team_id, release_id).await?),
+        None => None,
+    };
+
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to begin transaction");
+        AppError::InternalError
+    })?;
+
+    let incident = repo::insert_incident(
+        &mut *tx,
         Uuid::now_v7(),
         team_id,
         title,
         description,
         &severity,
         requester_id,
+        release_id,
     )
-    .await
+    .await?;
+
+    let blocked_state = match &release {
+        Some(release) => match release.block() {
+            Ok(new_state) => {
+                releases_repo::update_release_state(&mut *tx, release.id, &new_state, None).await?;
+                Some(new_state)
+            }
+            Err(_) => None,
+        },
+        None => None,
+    };
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to commit transaction");
+        AppError::InternalError
+    })?;
+
+    Ok((incident, blocked_state))
 }
 
 pub async fn get_incidents(
@@ -122,7 +154,7 @@ pub async fn resolve_incident(
     team_id: Uuid,
     incident_id: Uuid,
     requester_id: Uuid,
-) -> Result<Incident, AppError> {
+) -> Result<(Incident, Option<ReleaseState>), AppError> {
     let member = require_member(pool, team_id, requester_id).await?;
 
     if !member.role.can_close_incident() {
@@ -136,13 +168,50 @@ pub async fn resolve_incident(
         .resolve()
         .map_err(|e| AppError::Conflict(e.into()))?;
 
-    repo::update_incident_state(
-        pool,
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to begin transaction");
+        AppError::InternalError
+    })?;
+
+    let updated = repo::update_incident_state(
+        &mut *tx,
         incident_id,
         &new_state,
         Some(OffsetDateTime::now_utc()),
     )
-    .await
+    .await?;
+
+    let unblocked_state = match incident.release_id {
+        Some(release_id) => {
+            let still_active =
+                repo::has_unresolved_incidents_for_release(&mut *tx, release_id).await?;
+
+            if still_active {
+                None
+            } else if let Some(release) =
+                releases_repo::find_release_by_id(pool, release_id).await?
+            {
+                match release.unblock() {
+                    Ok(new_state) => {
+                        releases_repo::update_release_state(&mut *tx, release_id, &new_state, None)
+                            .await?;
+                        Some(new_state)
+                    }
+                    Err(_) => None,
+                }
+            } else {
+                None
+            }
+        }
+        None => None,
+    };
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to commit transaction");
+        AppError::InternalError
+    })?;
+
+    Ok((updated, unblocked_state))
 }
 
 pub async fn assign_responder(
@@ -260,4 +329,20 @@ async fn require_incident(
     }
 
     Ok(incident)
+}
+
+async fn require_release(
+    pool: &PgPool,
+    team_id: Uuid,
+    release_id: Uuid,
+) -> Result<crate::features::releases::model::Release, AppError> {
+    let release = releases_repo::find_release_by_id(pool, release_id)
+        .await?
+        .ok_or(AppError::NotFound("Release not found".into()))?;
+
+    if release.team_id != team_id {
+        return Err(AppError::NotFound("Release not found".into()));
+    }
+
+    Ok(release)
 }
