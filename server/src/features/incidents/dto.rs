@@ -11,6 +11,7 @@ pub struct CreateIncidentRequest {
     #[validate(length(max = 2000))]
     pub description: Option<String>,
     pub severity: SeverityDto,
+    pub release_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -96,6 +97,7 @@ pub struct IncidentResponse {
     pub severity: SeverityDto,
     pub created_by: Option<Uuid>,
     pub assigned_to: Option<Uuid>,
+    pub release_id: Option<Uuid>,
     pub created_at: i64,
     pub resolved_at: Option<i64>,
 }
@@ -111,6 +113,7 @@ impl From<Incident> for IncidentResponse {
             severity: incident.severity.into(),
             created_by: incident.created_by,
             assigned_to: incident.assigned_to,
+            release_id: incident.release_id,
             created_at: incident.created_at.unix_timestamp(),
             resolved_at: incident.resolved_at.map(|t| t.unix_timestamp()),
         }
@@ -151,6 +154,7 @@ mod tests {
             title: "DB down".into(),
             description: Some("Investigating".into()),
             severity: SeverityDto::High,
+            release_id: None,
         };
         assert!(req.validate().is_ok());
     }
@@ -161,6 +165,7 @@ mod tests {
             title: "".into(),
             description: None,
             severity: SeverityDto::High,
+            release_id: None,
         };
         assert!(req.validate().is_err());
     }
@@ -171,6 +176,7 @@ mod tests {
             title: "a".repeat(201),
             description: None,
             severity: SeverityDto::High,
+            release_id: None,
         };
         assert!(req.validate().is_err());
     }
@@ -181,6 +187,7 @@ mod tests {
             title: "DB down".into(),
             description: Some("a".repeat(2001)),
             severity: SeverityDto::High,
+            release_id: None,
         };
         assert!(req.validate().is_err());
     }
@@ -217,6 +224,7 @@ mod tests {
             severity: Severity::High,
             created_by: None,
             assigned_to: None,
+            release_id: None,
             created_at: OffsetDateTime::now_utc(),
             resolved_at: None,
         };
