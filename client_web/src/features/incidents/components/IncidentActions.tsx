@@ -29,20 +29,29 @@ export const IncidentActions = ({
   );
   const [assignedTo, setAssignedTo] = useState(incident.assigned_to ?? "");
 
-  const { mutate: acknowledge, isPending: acknowledging } =
-    useAcknowledgeIncident(teamId, incident.id);
-  const { mutate: escalate, isPending: escalating } = useEscalateIncident(
-    teamId,
-    incident.id,
-  );
-  const { mutate: resolve, isPending: resolving } = useResolveIncident(
-    teamId,
-    incident.id,
-  );
-  const { mutate: assign, isPending: assigning } = useAssignResponder(
-    teamId,
-    incident.id,
-  );
+  const {
+    mutate: acknowledge,
+    isPending: acknowledging,
+    error: acknowledgeError,
+  } = useAcknowledgeIncident(teamId, incident.id);
+  const {
+    mutate: escalate,
+    isPending: escalating,
+    error: escalateError,
+  } = useEscalateIncident(teamId, incident.id);
+  const {
+    mutate: resolve,
+    isPending: resolving,
+    error: resolveError,
+  } = useResolveIncident(teamId, incident.id);
+  const {
+    mutate: assign,
+    isPending: assigning,
+    error: assignError,
+  } = useAssignResponder(teamId, incident.id);
+
+  const error =
+    acknowledgeError ?? escalateError ?? resolveError ?? assignError;
 
   const canRespond =
     currentUserRole === "responder" || currentUserRole === "manager";
@@ -65,6 +74,12 @@ export const IncidentActions = ({
         Actions
       </h2>
 
+      {error && (
+        <div className="px-4 py-2 text-body rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
+          {error.message}
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-3">
         {canAcknowledge && (
           <Button
@@ -77,24 +92,35 @@ export const IncidentActions = ({
         )}
 
         {canEscalate && (
-          <div className="flex items-center gap-2">
-            <select
-              value={escalateSeverity}
-              onChange={(e) => setEscalateSeverity(e.target.value as Severity)}
-              className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="escalate-severity"
+              className="text-caption font-medium text-[var(--color-text-secondary)]"
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-            <Button
-              variant="secondary"
-              isLoading={escalating}
-              onClick={() => escalate({ severity: escalateSeverity })}
-            >
-              Escalate
-            </Button>
+              New severity
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                id="escalate-severity"
+                value={escalateSeverity}
+                onChange={(e) =>
+                  setEscalateSeverity(e.target.value as Severity)
+                }
+                className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+              <Button
+                variant="secondary"
+                isLoading={escalating}
+                onClick={() => escalate({ severity: escalateSeverity })}
+              >
+                Escalate
+              </Button>
+            </div>
           </div>
         )}
 
@@ -110,26 +136,35 @@ export const IncidentActions = ({
       </div>
 
       {canAssign && (
-        <div className="flex items-center gap-2">
-          <select
-            value={assignedTo}
-            onChange={(e) => setAssignedTo(e.target.value)}
-            className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="assign-to"
+            className="text-caption font-medium text-[var(--color-text-secondary)]"
           >
-            <option value="">Unassigned</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.user_id}>
-                {m.username ?? m.user_id}
-              </option>
-            ))}
-          </select>
-          <Button
-            variant="secondary"
-            isLoading={assigning}
-            onClick={() => assign({ user_id: assignedTo || null })}
-          >
-            Assign
-          </Button>
+            Assign to
+          </label>
+          <div className="flex items-center gap-2">
+            <select
+              id="assign-to"
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
+            >
+              <option value="">Unassigned</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.user_id}>
+                  {m.username ?? m.user_id}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="secondary"
+              isLoading={assigning}
+              onClick={() => assign({ user_id: assignedTo || null })}
+            >
+              Assign
+            </Button>
+          </div>
         </div>
       )}
     </div>

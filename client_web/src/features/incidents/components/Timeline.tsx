@@ -44,10 +44,11 @@ const TimelineEntry = ({
   incidentId: string;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const { mutate: editEntry, isPending } = useEditTimelineEntry(
-    teamId,
-    incidentId,
-  );
+  const {
+    mutate: editEntry,
+    isPending,
+    error,
+  } = useEditTimelineEntry(teamId, incidentId);
 
   const handleSave = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -85,7 +86,16 @@ const TimelineEntry = ({
 
       {isEditing ? (
         <form onSubmit={handleSave} className="flex flex-col gap-2 mt-1">
+          {error && (
+            <div className="px-4 py-2 text-body rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
+              {error.message}
+            </div>
+          )}
+          <label htmlFor={`edit-content-${entry.id}`} className="sr-only">
+            Edit timeline entry
+          </label>
           <textarea
+            id={`edit-content-${entry.id}`}
             name="content"
             defaultValue={entry.content}
             rows={2}
@@ -122,10 +132,11 @@ export const Timeline = ({
   currentUserId,
   currentUserRole,
 }: TimelineProps) => {
-  const { mutate: addEntry, isPending: adding } = useAddTimelineEntry(
-    teamId,
-    incidentId,
-  );
+  const {
+    mutate: addEntry,
+    isPending: adding,
+    error: addError,
+  } = useAddTimelineEntry(teamId, incidentId);
 
   const canAddEntry =
     currentUserRole === "responder" || currentUserRole === "manager";
@@ -172,6 +183,11 @@ export const Timeline = ({
 
       {canAddEntry && (
         <form onSubmit={handleAdd} className="flex flex-col gap-2">
+          {addError && (
+            <div className="px-4 py-2 text-body rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
+              {addError.message}
+            </div>
+          )}
           <label
             htmlFor="content"
             className="text-body font-medium text-[var(--color-text-secondary)]"

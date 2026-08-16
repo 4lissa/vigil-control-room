@@ -81,6 +81,7 @@ export default function IncidentDetailPage({
       </div>
 
       <IncidentActions
+        key={`${incident.severity}-${incident.assigned_to}`}
         teamId={teamId}
         incident={incident}
         members={members ?? []}
