@@ -49,8 +49,7 @@ export const WebSocketProvider = ({
   }, []);
 
   const onMessage = useCallback((handler: (event: WsEvent) => void) => {
-    if (!clientRef.current) return () => {};
-    return clientRef.current.onMessage(handler);
+    return clientRef.current!.onMessage(handler);
   }, []);
 
   return (
