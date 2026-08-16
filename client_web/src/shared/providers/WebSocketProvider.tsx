@@ -31,15 +31,16 @@ export const WebSocketProvider = ({
   children: React.ReactNode;
 }) => {
   const clientRef = useRef<WsClient | null>(null);
+  if (clientRef.current === null) {
+    clientRef.current = new WsClient(getToken);
+  }
 
   useEffect(() => {
-    const client = new WsClient(getToken);
-    clientRef.current = client;
+    const client = clientRef.current!;
     client.connect();
 
     return () => {
       client.disconnect();
-      clientRef.current = null;
     };
   }, []);
 

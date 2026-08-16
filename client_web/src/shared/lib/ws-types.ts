@@ -37,6 +37,17 @@ export type WsEvent =
       type: "presence_update";
       incident_id: string;
       watchers: string[];
+    }
+  | {
+      type: "release_step_validated";
+      release_id: string;
+      step: string;
+      by: string;
+    }
+  | {
+      type: "release_state_changed";
+      release_id: string;
+      new_state: string;
     };
 
 export type ClientMessage =
