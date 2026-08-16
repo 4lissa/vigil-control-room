@@ -95,3 +95,20 @@ pub async fn post_with_token(app: Router, uri: &str, token: &str) -> axum::respo
 
     app.oneshot(request).await.unwrap()
 }
+
+pub async fn patch_json_with_token(
+    app: Router,
+    uri: &str,
+    token: &str,
+    body: serde_json::Value,
+) -> axum::response::Response {
+    let request = Request::builder()
+        .method("PATCH")
+        .uri(uri)
+        .header("Content-Type", "application/json")
+        .header("Authorization", format!("Bearer {}", token))
+        .body(Body::from(serde_json::to_string(&body).unwrap()))
+        .unwrap();
+
+    app.oneshot(request).await.unwrap()
+}
