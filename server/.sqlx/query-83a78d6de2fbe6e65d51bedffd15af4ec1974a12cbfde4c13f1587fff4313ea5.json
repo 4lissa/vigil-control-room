@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE timeline_entries\n        SET content = $2, edited_at = now()\n        WHERE id = $1\n        RETURNING *\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "timeline_entries",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "incident_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "timeline_entries",
+            "name": "incident_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "author_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "timeline_entries",
+            "name": "author_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "timeline_entries",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "timeline_entries",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "edited_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "timeline_entries",
+            "name": "edited_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "83a78d6de2fbe6e65d51bedffd15af4ec1974a12cbfde4c13f1587fff4313ea5"
+}
