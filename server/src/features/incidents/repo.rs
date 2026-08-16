@@ -15,6 +15,7 @@ struct IncidentRow {
     severity: String,
     created_by: Option<Uuid>,
     assigned_to: Option<Uuid>,
+    release_id: Option<Uuid>,
     created_at: OffsetDateTime,
     resolved_at: Option<OffsetDateTime>,
 }
@@ -30,6 +31,7 @@ impl From<IncidentRow> for Incident {
             severity: severity_from_str(&row.severity),
             created_by: row.created_by,
             assigned_to: row.assigned_to,
+            release_id: row.release_id,
             created_at: row.created_at,
             resolved_at: row.resolved_at,
         }
@@ -97,6 +99,7 @@ fn severity_to_str(severity: &Severity) -> &'static str {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn insert_incident(
     executor: impl sqlx::PgExecutor<'_>,
     id: Uuid,
@@ -105,18 +108,19 @@ pub async fn insert_incident(
     description: &str,
     severity: &Severity,
     created_by: Uuid,
+    release_id: Option<Uuid>,
 ) -> Result<Incident, AppError> {
     let severity_str = severity_to_str(severity);
     let row = sqlx::query_as!(
         IncidentRow,
         r#"
-        INSERT INTO incidents (id, team_id, title, description, severity, created_by)
-        VALUES ($1, $2, $3, $4, $5::severity, $6)
+        INSERT INTO incidents (id, team_id, title, description, severity, created_by, release_id)
+        VALUES ($1, $2, $3, $4, $5::severity, $6, $7)
         RETURNING
             id, team_id, title, description,
             state::TEXT as "state!",
             severity::TEXT as "severity!",
-            created_by, assigned_to, created_at, resolved_at
+            created_by, assigned_to, release_id, created_at, resolved_at
         "#,
         id,
         team_id,
@@ -124,6 +128,7 @@ pub async fn insert_incident(
         description,
         severity_str as &str,
         created_by,
+        release_id,
     )
     .fetch_one(executor)
     .await
@@ -146,7 +151,7 @@ pub async fn find_incident_by_id(
             id, team_id, title, description,
             state::TEXT as "state!",
             severity::TEXT as "severity!",
-            created_by, assigned_to, created_at, resolved_at
+            created_by, assigned_to, release_id, created_at, resolved_at
         FROM incidents
         WHERE id = $1
         "#,
@@ -173,7 +178,7 @@ pub async fn find_incidents_by_team_id(
             id, team_id, title, description,
             state::TEXT as "state!",
             severity::TEXT as "severity!",
-            created_by, assigned_to, created_at, resolved_at
+            created_by, assigned_to, release_id, created_at, resolved_at
         FROM incidents
         WHERE team_id = $1
         ORDER BY created_at DESC
@@ -207,7 +212,7 @@ pub async fn update_incident_state(
             id, team_id, title, description,
             state::TEXT as "state!",
             severity::TEXT as "severity!",
-            created_by, assigned_to, created_at, resolved_at
+            created_by, assigned_to, release_id, created_at, resolved_at
         "#,
         incident_id,
         state_str as &str,
@@ -239,7 +244,7 @@ pub async fn update_incident_severity(
             id, team_id, title, description,
             state::TEXT as "state!",
             severity::TEXT as "severity!",
-            created_by, assigned_to, created_at, resolved_at
+            created_by, assigned_to, release_id, created_at, resolved_at
         "#,
         incident_id,
         severity_str as &str,
@@ -269,7 +274,7 @@ pub async fn update_incident_assigned_to(
             id, team_id, title, description,
             state::TEXT as "state!",
             severity::TEXT as "severity!",
-            created_by, assigned_to, created_at, resolved_at
+            created_by, assigned_to, release_id, created_at, resolved_at
         "#,
         incident_id,
         assigned_to,
@@ -282,6 +287,27 @@ pub async fn update_incident_assigned_to(
     })?;
 
     Ok(row.into())
+}
+
+pub async fn has_unresolved_incidents_for_release(
+    executor: impl sqlx::PgExecutor<'_>,
+    release_id: Uuid,
+) -> Result<bool, AppError> {
+    let count = sqlx::query_scalar!(
+        r#"
+        SELECT COUNT(*) FROM incidents
+        WHERE release_id = $1 AND state != 'resolved'::incident_state
+        "#,
+        release_id,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %release_id, "failed to count unresolved incidents for release");
+        AppError::InternalError
+    })?;
+
+    Ok(count.unwrap_or(0) > 0)
 }
 
 pub async fn insert_timeline_entry(
