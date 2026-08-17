@@ -2,7 +2,9 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::features::teams::model::{Role, Team, TeamBan, TeamMember, TeamMemberWithUsername};
+use crate::features::teams::model::{
+    Role, Team, TeamBan, TeamBanWithUsername, TeamMember, TeamMemberWithUsername,
+};
 use crate::shared::error::AppError;
 
 #[derive(sqlx::FromRow)]
@@ -86,6 +88,31 @@ impl From<TeamBanRow> for TeamBan {
             id: row.id,
             team_id: row.team_id,
             user_id: row.user_id,
+            banned_by: row.banned_by,
+            until: row.until,
+            created_at: row.created_at,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct TeamBanWithUsernameRow {
+    id: Uuid,
+    team_id: Uuid,
+    user_id: Uuid,
+    username: String,
+    banned_by: Option<Uuid>,
+    until: Option<OffsetDateTime>,
+    created_at: OffsetDateTime,
+}
+
+impl From<TeamBanWithUsernameRow> for TeamBanWithUsername {
+    fn from(row: TeamBanWithUsernameRow) -> Self {
+        Self {
+            id: row.id,
+            team_id: row.team_id,
+            user_id: row.user_id,
+            username: row.username,
             banned_by: row.banned_by,
             until: row.until,
             created_at: row.created_at,
@@ -330,13 +357,17 @@ pub async fn update_member_role(
     Ok(row.into())
 }
 
-pub async fn delete_member(pool: &PgPool, team_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
+pub async fn delete_member(
+    executor: impl sqlx::PgExecutor<'_>,
+    team_id: Uuid,
+    user_id: Uuid,
+) -> Result<(), AppError> {
     sqlx::query!(
         r#"DELETE FROM team_members WHERE team_id = $1 AND user_id = $2"#,
         team_id,
         user_id,
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|e| {
         tracing::error!(error = ?e, %team_id, %user_id, "failed to delete member");
@@ -347,7 +378,7 @@ pub async fn delete_member(pool: &PgPool, team_id: Uuid, user_id: Uuid) -> Resul
 }
 
 pub async fn insert_ban(
-    pool: &PgPool,
+    executor: impl sqlx::PgExecutor<'_>,
     id: Uuid,
     team_id: Uuid,
     user_id: Uuid,
@@ -371,7 +402,7 @@ pub async fn insert_ban(
         banned_by,
         until,
     )
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
     .map_err(|e| {
         tracing::error!(error = ?e, %team_id, %user_id, "failed to insert ban");
@@ -406,6 +437,32 @@ pub async fn find_active_ban(
     })?;
 
     Ok(row.map(Into::into))
+}
+
+pub async fn find_active_bans_by_team_id(
+    pool: &PgPool,
+    team_id: Uuid,
+) -> Result<Vec<TeamBanWithUsername>, AppError> {
+    let rows = sqlx::query_as!(
+        TeamBanWithUsernameRow,
+        r#"
+        SELECT tb.id, tb.team_id, tb.user_id, u.username, tb.banned_by, tb.until, tb.created_at
+        FROM team_bans tb
+        JOIN users u ON u.id = tb.user_id
+        WHERE tb.team_id = $1
+          AND (tb.until IS NULL OR tb.until > now())
+        ORDER BY tb.created_at DESC
+        "#,
+        team_id,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %team_id, "failed to find active bans by team id");
+        AppError::InternalError
+    })?;
+
+    Ok(rows.into_iter().map(Into::into).collect())
 }
 
 pub async fn delete_ban(pool: &PgPool, team_id: Uuid, user_id: Uuid) -> Result<(), AppError> {
