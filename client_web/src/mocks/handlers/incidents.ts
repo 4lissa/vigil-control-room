@@ -22,6 +22,21 @@ const mockTimelineEntry = {
   edited_at: null,
 };
 
+const mockReaction = {
+  id: "reaction-123",
+  entry_id: "entry-123",
+  user_id: "123",
+  emoji: "+1",
+  created_at: 1755000000,
+};
+
+const mockReactionSummary = {
+  entry_id: "entry-123",
+  emoji: "+1",
+  usernames: ["alissa", "bob"],
+  reacted_by_me: true,
+};
+
 export const incidentsHandlers = [
   http.get("http://localhost:8080/teams/:teamId/incidents", () => {
     return HttpResponse.json([mockIncident]);
@@ -93,6 +108,31 @@ export const incidentsHandlers = [
         content: "Updated",
         edited_at: 1755002000,
       });
+    },
+  ),
+
+  http.get("http://localhost:8080/reactions/available", () => {
+    return HttpResponse.json(["+1", "-1", "eyes", "warning", "check", "fire"]);
+  }),
+
+  http.get(
+    "http://localhost:8080/teams/:teamId/incidents/:incidentId/timeline/reactions",
+    () => {
+      return HttpResponse.json([mockReactionSummary]);
+    },
+  ),
+
+  http.post(
+    "http://localhost:8080/teams/:teamId/incidents/:incidentId/timeline/:entryId/reactions",
+    () => {
+      return HttpResponse.json(mockReaction, { status: 201 });
+    },
+  ),
+
+  http.delete(
+    "http://localhost:8080/teams/:teamId/incidents/:incidentId/timeline/:entryId/reactions/:emoji",
+    () => {
+      return new HttpResponse(null, { status: 204 });
     },
   ),
 ];
