@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO messages (id, sender_id, recipient_id, content)\n        VALUES ($1, $2, $3, $4)\n        RETURNING *\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "sender_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "sender_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "recipient_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "recipient_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "messages",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3b19fad365f87079da6d405731533de9ae5384c51980e33e45922f7776980a7b"
+}
