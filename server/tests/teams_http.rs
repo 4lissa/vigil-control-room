@@ -5,6 +5,41 @@ use axum::http::StatusCode;
 use serde_json::json;
 use sqlx::PgPool;
 
+async fn create_team_with_member(pool: &PgPool) -> (uuid::Uuid, String, uuid::Uuid, String) {
+    let (user1, session1) = common::create_test_user(pool).await;
+    let (user2, session2) = common::create_test_user_with(pool, "bob", "bob@example.com").await;
+    let (team, _) = common::create_test_team(pool, "My Team", user1.id).await;
+
+    let app = common::build_test_app(pool.clone());
+    let invite_response = common::post_with_token(
+        app,
+        &format!("/teams/{}/invite", team.id),
+        &session1.id.to_string(),
+    )
+    .await;
+    let body = to_bytes(invite_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let code = body["invitation_code"].as_str().unwrap().to_string();
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        "/teams/join",
+        &session2.id.to_string(),
+        json!({ "code": code }),
+    )
+    .await;
+
+    (
+        team.id,
+        session1.id.to_string(),
+        user2.id,
+        session2.id.to_string(),
+    )
+}
+
 #[sqlx::test(migrations = "./migrations")]
 async fn create_team_returns_201(pool: PgPool) {
     let (_, session) = common::create_test_user(&pool).await;
@@ -189,4 +224,108 @@ async fn transfer_manager_returns_204(pool: PgPool) {
     .await;
 
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn kick_member_returns_204(pool: PgPool) {
+    let (team_id, token1, user2_id, _) = create_team_with_member(&pool).await;
+
+    let app = common::build_test_app(pool);
+    let response = common::post_with_token(
+        app,
+        &format!("/teams/{}/members/{}/kick", team_id, user2_id),
+        &token1,
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn ban_member_returns_204_and_removes_member(pool: PgPool) {
+    let (team_id, token1, user2_id, _) = create_team_with_member(&pool).await;
+
+    let app = common::build_test_app(pool.clone());
+    let response = common::post_json_with_token(
+        app,
+        &format!("/teams/{}/members/{}/ban", team_id, user2_id),
+        &token1,
+        json!({ "until": null }),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    let app = common::build_test_app(pool);
+    let members_response =
+        common::get_with_token(app, &format!("/teams/{}/members", team_id), &token1).await;
+    let body = to_bytes(members_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let members = body.as_array().unwrap();
+    assert!(!members.iter().any(|m| m["user_id"] == user2_id.to_string()));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn list_bans_returns_banned_member(pool: PgPool) {
+    let (team_id, token1, user2_id, _) = create_team_with_member(&pool).await;
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        &format!("/teams/{}/members/{}/ban", team_id, user2_id),
+        &token1,
+        json!({ "until": null }),
+    )
+    .await;
+
+    let app = common::build_test_app(pool);
+    let response = common::get_with_token(app, &format!("/teams/{}/bans", team_id), &token1).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let bans = body.as_array().unwrap();
+    assert_eq!(bans.len(), 1);
+    assert_eq!(bans[0]["username"], "bob");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn unban_member_returns_204_and_allows_rejoin(pool: PgPool) {
+    let (team_id, token1, user2_id, token2) = create_team_with_member(&pool).await;
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        &format!("/teams/{}/members/{}/ban", team_id, user2_id),
+        &token1,
+        json!({ "until": null }),
+    )
+    .await;
+
+    let app = common::build_test_app(pool.clone());
+    let response = common::delete_with_token(
+        app,
+        &format!("/teams/{}/members/{}/ban", team_id, user2_id),
+        &token1,
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    let app = common::build_test_app(pool.clone());
+    let invite_response =
+        common::post_with_token(app, &format!("/teams/{}/invite", team_id), &token1).await;
+    let body = to_bytes(invite_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let code = body["invitation_code"].as_str().unwrap().to_string();
+
+    let app = common::build_test_app(pool);
+    let join_response =
+        common::post_json_with_token(app, "/teams/join", &token2, json!({ "code": code })).await;
+
+    assert_eq!(join_response.status(), StatusCode::OK);
 }
