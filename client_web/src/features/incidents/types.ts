@@ -21,6 +21,12 @@ export interface EditTimelineEntryRequest {
   content: string;
 }
 
+export interface AddReactionRequest {
+  emoji: Emoji;
+}
+
+export type Emoji = "+1" | "-1" | "eyes" | "warning" | "check" | "fire";
+
 export type Severity = "low" | "medium" | "high" | "critical";
 
 export type IncidentState = "open" | "acknowledged" | "escalated" | "resolved";
@@ -46,4 +52,19 @@ export interface TimelineEntryResponse {
   content: string;
   created_at: number;
   edited_at: number | null;
+}
+
+export interface ReactionResponse {
+  id: string;
+  entry_id: string;
+  user_id: string;
+  emoji: Emoji;
+  created_at: number;
+}
+
+export interface ReactionSummaryResponse {
+  entry_id: string;
+  emoji: Emoji;
+  usernames: string[];
+  reacted_by_me: boolean;
 }
