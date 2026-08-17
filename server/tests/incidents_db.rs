@@ -1,7 +1,10 @@
 mod common;
 
 use sqlx::PgPool;
-use vigil_server::features::incidents::{model::Severity, service};
+use vigil_server::features::incidents::{
+    model::{ReactionEmoji, Severity},
+    service,
+};
 use vigil_server::shared::error::AppError;
 
 #[sqlx::test(migrations = "./migrations")]
@@ -289,6 +292,292 @@ async fn edit_timeline_entry_fails_for_non_author(pool: PgPool) {
     let result =
         service::edit_timeline_entry(&pool, team.id, incident.id, entry.id, user2.id, "Hacked")
             .await;
+
+    assert!(matches!(result, Err(AppError::Forbidden(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn edit_timeline_entry_fails_for_entry_from_another_incident(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+
+    let (incident_a, _) =
+        service::create_incident(&pool, team.id, user.id, "DB down", "", Severity::High, None)
+            .await
+            .unwrap();
+    let (incident_b, _) = service::create_incident(
+        &pool,
+        team.id,
+        user.id,
+        "API down",
+        "",
+        Severity::High,
+        None,
+    )
+    .await
+    .unwrap();
+
+    let entry = service::add_timeline_entry(&pool, team.id, incident_a.id, user.id, "note")
+        .await
+        .unwrap();
+
+    let result =
+        service::edit_timeline_entry(&pool, team.id, incident_b.id, entry.id, user.id, "hacked")
+            .await;
+
+    assert!(matches!(result, Err(AppError::NotFound(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn add_reaction_succeeds(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+
+    let (incident, _) =
+        service::create_incident(&pool, team.id, user.id, "DB down", "", Severity::High, None)
+            .await
+            .unwrap();
+    let entry = service::add_timeline_entry(&pool, team.id, incident.id, user.id, "note")
+        .await
+        .unwrap();
+
+    let reaction = service::add_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user.id,
+        ReactionEmoji::ThumbsUp,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(reaction.emoji, ReactionEmoji::ThumbsUp);
+    assert_eq!(reaction.user_id, user.id);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn add_reaction_fails_for_duplicate_emoji(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+
+    let (incident, _) =
+        service::create_incident(&pool, team.id, user.id, "DB down", "", Severity::High, None)
+            .await
+            .unwrap();
+    let entry = service::add_timeline_entry(&pool, team.id, incident.id, user.id, "note")
+        .await
+        .unwrap();
+
+    service::add_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user.id,
+        ReactionEmoji::Fire,
+    )
+    .await
+    .unwrap();
+
+    let result = service::add_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user.id,
+        ReactionEmoji::Fire,
+    )
+    .await;
+
+    assert!(matches!(result, Err(AppError::Conflict(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn add_reaction_fails_for_entry_from_another_incident(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+
+    let (incident_a, _) =
+        service::create_incident(&pool, team.id, user.id, "DB down", "", Severity::High, None)
+            .await
+            .unwrap();
+    let (incident_b, _) = service::create_incident(
+        &pool,
+        team.id,
+        user.id,
+        "API down",
+        "",
+        Severity::High,
+        None,
+    )
+    .await
+    .unwrap();
+
+    let entry = service::add_timeline_entry(&pool, team.id, incident_a.id, user.id, "note")
+        .await
+        .unwrap();
+
+    let result = service::add_reaction(
+        &pool,
+        team.id,
+        incident_b.id,
+        entry.id,
+        user.id,
+        ReactionEmoji::Fire,
+    )
+    .await;
+
+    assert!(matches!(result, Err(AppError::NotFound(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn remove_reaction_removes_it(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+
+    let (incident, _) =
+        service::create_incident(&pool, team.id, user.id, "DB down", "", Severity::High, None)
+            .await
+            .unwrap();
+    let entry = service::add_timeline_entry(&pool, team.id, incident.id, user.id, "note")
+        .await
+        .unwrap();
+
+    service::add_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user.id,
+        ReactionEmoji::Eyes,
+    )
+    .await
+    .unwrap();
+
+    service::remove_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user.id,
+        ReactionEmoji::Eyes,
+    )
+    .await
+    .unwrap();
+
+    let summaries = service::get_reactions(&pool, team.id, incident.id, user.id)
+        .await
+        .unwrap();
+
+    assert!(summaries.is_empty());
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn remove_reaction_is_idempotent(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+
+    let (incident, _) =
+        service::create_incident(&pool, team.id, user.id, "DB down", "", Severity::High, None)
+            .await
+            .unwrap();
+    let entry = service::add_timeline_entry(&pool, team.id, incident.id, user.id, "note")
+        .await
+        .unwrap();
+
+    let result = service::remove_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user.id,
+        ReactionEmoji::Warning,
+    )
+    .await;
+
+    assert!(result.is_ok());
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn get_reactions_returns_aggregated_counts(pool: PgPool) {
+    let (user1, _) = common::create_test_user(&pool).await;
+    let (user2, _) = common::create_test_user_with(&pool, "bob", "bob@example.com").await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user1.id).await;
+
+    let code = vigil_server::features::teams::service::generate_invitation_code_for_team(
+        &pool, team.id, user1.id,
+    )
+    .await
+    .unwrap();
+    vigil_server::features::teams::service::join_team(&pool, &code, user2.id)
+        .await
+        .unwrap();
+
+    let (incident, _) = service::create_incident(
+        &pool,
+        team.id,
+        user1.id,
+        "DB down",
+        "",
+        Severity::High,
+        None,
+    )
+    .await
+    .unwrap();
+    let entry = service::add_timeline_entry(&pool, team.id, incident.id, user1.id, "note")
+        .await
+        .unwrap();
+
+    service::add_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user1.id,
+        ReactionEmoji::ThumbsUp,
+    )
+    .await
+    .unwrap();
+    service::add_reaction(
+        &pool,
+        team.id,
+        incident.id,
+        entry.id,
+        user2.id,
+        ReactionEmoji::ThumbsUp,
+    )
+    .await
+    .unwrap();
+
+    let summaries = service::get_reactions(&pool, team.id, incident.id, user1.id)
+        .await
+        .unwrap();
+
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].usernames, vec!["alissa", "bob"]);
+    assert!(summaries[0].reacted_by_me);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn get_reactions_fails_for_non_member(pool: PgPool) {
+    let (user1, _) = common::create_test_user(&pool).await;
+    let (user2, _) = common::create_test_user_with(&pool, "bob", "bob@example.com").await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user1.id).await;
+
+    let (incident, _) = service::create_incident(
+        &pool,
+        team.id,
+        user1.id,
+        "DB down",
+        "",
+        Severity::High,
+        None,
+    )
+    .await
+    .unwrap();
+
+    let result = service::get_reactions(&pool, team.id, incident.id, user2.id).await;
 
     assert!(matches!(result, Err(AppError::Forbidden(_))));
 }
