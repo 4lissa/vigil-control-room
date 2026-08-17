@@ -4,6 +4,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 use crate::features::auth::routes as auth_routes;
 use crate::features::incidents::routes as incidents_routes;
+use crate::features::messages::routes as messages_routes;
 use crate::features::releases::routes as releases_routes;
 use crate::features::teams::routes as teams_routes;
 use crate::shared::middleware::require_auth;
@@ -21,6 +22,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(teams_routes::router())
         .merge(incidents_routes::router())
         .merge(releases_routes::router())
+        .merge(messages_routes::router())
         .layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
     Router::new()

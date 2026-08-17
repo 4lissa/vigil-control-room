@@ -96,6 +96,17 @@ pub async fn post_with_token(app: Router, uri: &str, token: &str) -> axum::respo
     app.oneshot(request).await.unwrap()
 }
 
+pub async fn delete_with_token(app: Router, uri: &str, token: &str) -> axum::response::Response {
+    let request = Request::builder()
+        .method("DELETE")
+        .uri(uri)
+        .header("Authorization", format!("Bearer {}", token))
+        .body(Body::empty())
+        .unwrap();
+
+    app.oneshot(request).await.unwrap()
+}
+
 pub async fn patch_json_with_token(
     app: Router,
     uri: &str,
