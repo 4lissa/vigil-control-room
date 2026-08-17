@@ -146,8 +146,8 @@ export const TeamMemberList = ({
           )}
           <p className="text-body text-[var(--color-text-primary)]">
             Ban <strong>{banTarget?.username ?? banTarget?.user_id}</strong>{" "}
-            from {teamName}? They will be removed immediately and won’t be
-            able to rejoin until the ban is lifted.
+            from {teamName}? They will be removed immediately and won’t be able
+            to rejoin until the ban is lifted.
           </p>
           <div className="flex flex-col gap-1">
             <label
