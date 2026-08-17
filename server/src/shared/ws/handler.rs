@@ -77,7 +77,8 @@ async fn handle_socket(
     let client_id = Uuid::now_v7();
     let (tx, mut rx) = mpsc::unbounded_channel();
 
-    hub.connect(client_id, tx, username.clone(), team_ids).await;
+    hub.connect(client_id, tx, user_id, username.clone(), team_ids)
+        .await;
 
     let (mut sink, mut stream) = socket.split();
 

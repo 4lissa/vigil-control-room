@@ -46,6 +46,12 @@ pub enum WsEvent {
         release_id: Uuid,
         new_state: String,
     },
+    PrivateMessageReceived {
+        from: String,
+        to: String,
+        content: String,
+        at: i64,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,6 +83,21 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains(r#""type":"incident_state_changed""#));
         assert!(json.contains(r#""new_state":"acknowledged""#));
+    }
+
+    #[test]
+    fn private_message_received_serializes_correctly() {
+        let event = WsEvent::PrivateMessageReceived {
+            from: "alissa".into(),
+            to: "bob".into(),
+            content: "hey".into(),
+            at: 1718000000,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"private_message_received","from":"alissa","to":"bob","content":"hey","at":1718000000}"#
+        );
     }
 
     #[test]

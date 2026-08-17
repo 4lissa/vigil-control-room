@@ -16,6 +16,8 @@ struct HubInner {
     incident_watchers: HashMap<Uuid, HashSet<Uuid>>,
     client_teams: HashMap<Uuid, HashSet<Uuid>>,
     client_username: HashMap<Uuid, String>,
+    user_clients: HashMap<Uuid, HashSet<Uuid>>,
+    client_user: HashMap<Uuid, Uuid>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -32,12 +34,19 @@ impl Hub {
         &self,
         client_id: Uuid,
         sender: ClientSender,
+        user_id: Uuid,
         username: String,
         team_ids: Vec<Uuid>,
     ) {
         let mut inner = self.inner.write().await;
         inner.clients.insert(client_id, sender);
         inner.client_username.insert(client_id, username);
+        inner.client_user.insert(client_id, user_id);
+        inner
+            .user_clients
+            .entry(user_id)
+            .or_default()
+            .insert(client_id);
 
         let teams: HashSet<Uuid> = team_ids.iter().cloned().collect();
         inner.client_teams.insert(client_id, teams);
@@ -55,6 +64,15 @@ impl Hub {
         let mut inner = self.inner.write().await;
         inner.clients.remove(&client_id);
         inner.client_username.remove(&client_id);
+
+        if let Some(user_id) = inner.client_user.remove(&client_id)
+            && let Some(clients) = inner.user_clients.get_mut(&user_id)
+        {
+            clients.remove(&client_id);
+            if clients.is_empty() {
+                inner.user_clients.remove(&user_id);
+            }
+        }
 
         if let Some(teams) = inner.client_teams.remove(&client_id) {
             for team_id in teams {
@@ -108,6 +126,21 @@ impl Hub {
         let inner = self.inner.read().await;
         if let Some(sender) = inner.clients.get(&client_id) {
             let _ = sender.send(Message::Text(msg.into()));
+        }
+    }
+
+    pub async fn send_to_user(&self, user_id: Uuid, event: &WsEvent) {
+        let Ok(msg) = serde_json::to_string(event) else {
+            return;
+        };
+        let inner = self.inner.read().await;
+        let Some(client_ids) = inner.user_clients.get(&user_id) else {
+            return;
+        };
+        for client_id in client_ids {
+            if let Some(sender) = inner.clients.get(client_id) {
+                let _ = sender.send(Message::Text(msg.clone().into()));
+            }
         }
     }
 
@@ -167,8 +200,14 @@ mod tests {
         let team_id = Uuid::now_v7();
         let (tx, _rx) = mpsc::unbounded_channel();
 
-        hub.connect(client_id, tx, "alissa".into(), vec![team_id])
-            .await;
+        hub.connect(
+            client_id,
+            tx,
+            Uuid::now_v7(),
+            "alissa".into(),
+            vec![team_id],
+        )
+        .await;
 
         let inner = hub.inner.read().await;
         assert!(inner.clients.contains_key(&client_id));
@@ -188,8 +227,14 @@ mod tests {
         let team_id = Uuid::now_v7();
         let (tx, _rx) = mpsc::unbounded_channel();
 
-        hub.connect(client_id, tx, "alissa".into(), vec![team_id])
-            .await;
+        hub.connect(
+            client_id,
+            tx,
+            Uuid::now_v7(),
+            "alissa".into(),
+            vec![team_id],
+        )
+        .await;
         hub.disconnect(client_id).await;
 
         let inner = hub.inner.read().await;
@@ -208,10 +253,22 @@ mod tests {
         let (tx_a, mut rx_a) = mpsc::unbounded_channel();
         let (tx_b, mut rx_b) = mpsc::unbounded_channel();
 
-        hub.connect(client_a, tx_a, "alissa".into(), vec![team_id])
-            .await;
-        hub.connect(client_b, tx_b, "bob".into(), vec![other_team_id])
-            .await;
+        hub.connect(
+            client_a,
+            tx_a,
+            Uuid::now_v7(),
+            "alissa".into(),
+            vec![team_id],
+        )
+        .await;
+        hub.connect(
+            client_b,
+            tx_b,
+            Uuid::now_v7(),
+            "bob".into(),
+            vec![other_team_id],
+        )
+        .await;
 
         hub.broadcast_to_team(team_id, &WsEvent::Pong).await;
 
@@ -227,8 +284,14 @@ mod tests {
         let team_id = Uuid::now_v7();
         let (tx, _rx) = mpsc::unbounded_channel();
 
-        hub.connect(client_id, tx, "alissa".into(), vec![team_id])
-            .await;
+        hub.connect(
+            client_id,
+            tx,
+            Uuid::now_v7(),
+            "alissa".into(),
+            vec![team_id],
+        )
+        .await;
         let watchers = hub.watch_incident(client_id, incident_id).await;
 
         assert_eq!(watchers, vec!["alissa"]);
@@ -246,10 +309,22 @@ mod tests {
         let (tx_watcher, mut rx_watcher) = mpsc::unbounded_channel();
         let (tx_bystander, mut rx_bystander) = mpsc::unbounded_channel();
 
-        hub.connect(watcher, tx_watcher, "alissa".into(), vec![team_id])
-            .await;
-        hub.connect(bystander, tx_bystander, "bob".into(), vec![team_id])
-            .await;
+        hub.connect(
+            watcher,
+            tx_watcher,
+            Uuid::now_v7(),
+            "alissa".into(),
+            vec![team_id],
+        )
+        .await;
+        hub.connect(
+            bystander,
+            tx_bystander,
+            Uuid::now_v7(),
+            "bob".into(),
+            vec![team_id],
+        )
+        .await;
         hub.watch_incident(watcher, incident_id).await;
         hub.watch_incident(bystander, other_incident_id).await;
 
@@ -267,11 +342,53 @@ mod tests {
         let team_id = Uuid::now_v7();
         let (tx, _rx) = mpsc::unbounded_channel();
 
-        hub.connect(client_id, tx, "alissa".into(), vec![team_id])
-            .await;
+        hub.connect(
+            client_id,
+            tx,
+            Uuid::now_v7(),
+            "alissa".into(),
+            vec![team_id],
+        )
+        .await;
         hub.watch_incident(client_id, incident_id).await;
         let watchers = hub.unwatch_incident(client_id, incident_id).await;
 
         assert!(watchers.is_empty());
+    }
+
+    #[tokio::test]
+    async fn send_to_user_delivers_only_to_that_users_clients() {
+        let hub = Hub::new();
+        let user_a = Uuid::now_v7();
+        let user_b = Uuid::now_v7();
+        let client_a = Uuid::now_v7();
+        let client_b = Uuid::now_v7();
+        let (tx_a, mut rx_a) = mpsc::unbounded_channel();
+        let (tx_b, mut rx_b) = mpsc::unbounded_channel();
+
+        hub.connect(client_a, tx_a, user_a, "alissa".into(), vec![])
+            .await;
+        hub.connect(client_b, tx_b, user_b, "bob".into(), vec![])
+            .await;
+
+        hub.send_to_user(user_a, &WsEvent::Pong).await;
+
+        assert!(rx_a.try_recv().is_ok());
+        assert!(rx_b.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn disconnect_removes_client_from_user_mapping() {
+        let hub = Hub::new();
+        let user_id = Uuid::now_v7();
+        let client_id = Uuid::now_v7();
+        let (tx, _rx) = mpsc::unbounded_channel();
+
+        hub.connect(client_id, tx, user_id, "alissa".into(), vec![])
+            .await;
+        hub.disconnect(client_id).await;
+
+        let inner = hub.inner.read().await;
+        assert!(!inner.user_clients.contains_key(&user_id));
     }
 }
