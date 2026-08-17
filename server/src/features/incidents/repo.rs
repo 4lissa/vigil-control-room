@@ -2,7 +2,9 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::features::incidents::model::{Incident, IncidentState, Severity, TimelineEntry};
+use crate::features::incidents::model::{
+    Incident, IncidentState, Reaction, ReactionEmoji, ReactionWithUsername, Severity, TimelineEntry,
+};
 use crate::shared::error::AppError;
 
 #[derive(sqlx::FromRow)]
@@ -57,6 +59,58 @@ impl From<TimelineEntryRow> for TimelineEntry {
             content: row.content,
             created_at: row.created_at,
             edited_at: row.edited_at,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct ReactionRow {
+    id: Uuid,
+    entry_id: Uuid,
+    user_id: Uuid,
+    emoji: String,
+    created_at: OffsetDateTime,
+}
+
+impl From<ReactionRow> for Reaction {
+    fn from(row: ReactionRow) -> Self {
+        Self {
+            id: row.id,
+            entry_id: row.entry_id,
+            user_id: row.user_id,
+            emoji: reaction_emoji_from_str(&row.emoji),
+            created_at: row.created_at,
+        }
+    }
+}
+
+fn reaction_emoji_from_str(s: &str) -> ReactionEmoji {
+    match s {
+        "+1" => ReactionEmoji::ThumbsUp,
+        "-1" => ReactionEmoji::ThumbsDown,
+        "eyes" => ReactionEmoji::Eyes,
+        "warning" => ReactionEmoji::Warning,
+        "check" => ReactionEmoji::Check,
+        "fire" => ReactionEmoji::Fire,
+        _ => unreachable!("unexpected reaction_emoji value from database: {}", s),
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct ReactionWithUsernameRow {
+    entry_id: Uuid,
+    user_id: Uuid,
+    username: String,
+    emoji: String,
+}
+
+impl From<ReactionWithUsernameRow> for ReactionWithUsername {
+    fn from(row: ReactionWithUsernameRow) -> Self {
+        Self {
+            entry_id: row.entry_id,
+            user_id: row.user_id,
+            username: row.username,
+            emoji: reaction_emoji_from_str(&row.emoji),
         }
     }
 }
@@ -406,4 +460,93 @@ pub async fn update_timeline_entry_content(
     })?;
 
     Ok(row.into())
+}
+
+pub async fn insert_reaction(
+    pool: &PgPool,
+    id: Uuid,
+    entry_id: Uuid,
+    user_id: Uuid,
+    emoji: &ReactionEmoji,
+) -> Result<Reaction, AppError> {
+    let emoji_str = emoji.as_str();
+    let row = sqlx::query_as!(
+        ReactionRow,
+        r#"
+        INSERT INTO timeline_reactions (id, entry_id, user_id, emoji)
+        VALUES ($1, $2, $3, $4::reaction_emoji)
+        RETURNING id, entry_id, user_id, emoji::TEXT as "emoji!", created_at
+        "#,
+        id,
+        entry_id,
+        user_id,
+        emoji_str as &str,
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::Database(db)
+            if db.constraint() == Some("timeline_reactions_unique_reaction") =>
+        {
+            AppError::Conflict("You already reacted with this emoji".into())
+        }
+        e => {
+            tracing::error!(error = ?e, %entry_id, %user_id, "failed to insert reaction");
+            AppError::InternalError
+        }
+    })?;
+
+    Ok(row.into())
+}
+
+pub async fn delete_reaction(
+    pool: &PgPool,
+    entry_id: Uuid,
+    user_id: Uuid,
+    emoji: &ReactionEmoji,
+) -> Result<(), AppError> {
+    let emoji_str = emoji.as_str();
+    sqlx::query!(
+        r#"
+        DELETE FROM timeline_reactions
+        WHERE entry_id = $1 AND user_id = $2 AND emoji = $3::reaction_emoji
+        "#,
+        entry_id,
+        user_id,
+        emoji_str as &str,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %entry_id, %user_id, "failed to delete reaction");
+        AppError::InternalError
+    })?;
+
+    Ok(())
+}
+
+pub async fn find_reactions_by_incident_id(
+    pool: &PgPool,
+    incident_id: Uuid,
+) -> Result<Vec<ReactionWithUsername>, AppError> {
+    let rows = sqlx::query_as!(
+        ReactionWithUsernameRow,
+        r#"
+        SELECT tr.entry_id, tr.user_id, u.username, tr.emoji::TEXT as "emoji!"
+        FROM timeline_reactions tr
+        JOIN timeline_entries te ON te.id = tr.entry_id
+        JOIN users u ON u.id = tr.user_id
+        WHERE te.incident_id = $1
+        ORDER BY tr.created_at ASC
+        "#,
+        incident_id,
+    )
+    .fetch_all(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %incident_id, "failed to find reactions by incident id");
+        AppError::InternalError
+    })?;
+
+    Ok(rows.into_iter().map(Into::into).collect())
 }

@@ -15,6 +15,10 @@ import {
   useTimelineEntries,
   useAddTimelineEntry,
   useEditTimelineEntry,
+  useAvailableEmojis,
+  useReactions,
+  useAddReaction,
+  useRemoveReaction,
 } from "./hooks";
 
 const teamId = "team-123";
@@ -314,5 +318,129 @@ describe("useEditTimelineEntry", () => {
     expect(result.current.error?.message).toBe(
       "Only the author can edit their timeline entry",
     );
+  });
+});
+
+describe("useAvailableEmojis", () => {
+  it("fetches the fixed emoji set", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useAvailableEmojis(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toEqual([
+      "+1",
+      "-1",
+      "eyes",
+      "warning",
+      "check",
+      "fire",
+    ]);
+  });
+});
+
+describe("useReactions", () => {
+  it("fetches the aggregated reactions for an incident", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useReactions(teamId, incidentId), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data![0]).toMatchObject({
+      emoji: "+1",
+      usernames: ["alissa", "bob"],
+      reacted_by_me: true,
+    });
+  });
+});
+
+describe("useAddReaction", () => {
+  it("returns the created reaction and invalidates the reactions cache", async () => {
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData(
+      ["teams", teamId, "incidents", incidentId, "reactions"],
+      [],
+    );
+
+    const { result } = renderHook(() => useAddReaction(teamId, incidentId), {
+      wrapper,
+    });
+
+    result.current.mutate({ entryId: "entry-123", emoji: "+1" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toMatchObject({ emoji: "+1" });
+    expect(
+      queryClient.getQueryState([
+        "teams",
+        teamId,
+        "incidents",
+        incidentId,
+        "reactions",
+      ])?.isInvalidated,
+    ).toBe(true);
+  });
+
+  it("fails when the same emoji was already added", async () => {
+    server.use(
+      http.post(
+        "http://localhost:8080/teams/:teamId/incidents/:incidentId/timeline/:entryId/reactions",
+        () => {
+          return HttpResponse.json(
+            {
+              error: {
+                code: "CONFLICT",
+                message: "You already reacted with this emoji",
+              },
+            },
+            { status: 409 },
+          );
+        },
+      ),
+    );
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useAddReaction(teamId, incidentId), {
+      wrapper,
+    });
+
+    result.current.mutate({ entryId: "entry-123", emoji: "+1" });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe(
+      "You already reacted with this emoji",
+    );
+  });
+});
+
+describe("useRemoveReaction", () => {
+  it("invalidates the reactions cache on success", async () => {
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData(
+      ["teams", teamId, "incidents", incidentId, "reactions"],
+      [],
+    );
+
+    const { result } = renderHook(() => useRemoveReaction(teamId, incidentId), {
+      wrapper,
+    });
+
+    result.current.mutate({ entryId: "entry-123", emoji: "+1" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(
+      queryClient.getQueryState([
+        "teams",
+        teamId,
+        "incidents",
+        incidentId,
+        "reactions",
+      ])?.isInvalidated,
+    ).toBe(true);
   });
 });

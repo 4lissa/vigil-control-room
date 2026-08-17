@@ -39,6 +39,20 @@ export type WsEvent =
       watchers: string[];
     }
   | {
+      type: "reaction_added";
+      incident_id: string;
+      entry_id: string;
+      emoji: string;
+      by: string;
+    }
+  | {
+      type: "reaction_removed";
+      incident_id: string;
+      entry_id: string;
+      emoji: string;
+      by: string;
+    }
+  | {
       type: "release_step_validated";
       release_id: string;
       step: string;

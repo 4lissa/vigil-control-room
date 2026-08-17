@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM timeline_reactions\n        WHERE entry_id = $1 AND user_id = $2 AND emoji = $3::reaction_emoji\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "reaction_emoji",
+            "kind": {
+              "Enum": [
+                "+1",
+                "-1",
+                "eyes",
+                "warning",
+                "check",
+                "fire"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e7e00c615b98be63e0186f81c37142e06e802a55173a5a2f3320323ccafd9181"
+}

@@ -2,7 +2,10 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::features::incidents::model::{Incident, IncidentState, Severity, TimelineEntry};
+use crate::features::incidents::model::{
+    Incident, IncidentState, Reaction, ReactionEmoji, ReactionSummary, Severity, TimelineEntry,
+    summarize_reactions,
+};
 use crate::features::incidents::repo;
 use crate::features::releases::model::ReleaseState;
 use crate::features::releases::repo as releases_repo;
@@ -290,9 +293,7 @@ pub async fn edit_timeline_entry(
     require_member(pool, team_id, requester_id).await?;
     require_incident(pool, team_id, incident_id).await?;
 
-    let entry = repo::find_timeline_entry_by_id(pool, entry_id)
-        .await?
-        .ok_or(AppError::NotFound("Timeline entry not found".into()))?;
+    let entry = require_timeline_entry(pool, incident_id, entry_id).await?;
 
     if !entry.can_edit(requester_id) {
         return Err(AppError::Forbidden(
@@ -301,6 +302,50 @@ pub async fn edit_timeline_entry(
     }
 
     repo::update_timeline_entry_content(pool, entry_id, new_content).await
+}
+
+pub async fn add_reaction(
+    pool: &PgPool,
+    team_id: Uuid,
+    incident_id: Uuid,
+    entry_id: Uuid,
+    requester_id: Uuid,
+    emoji: ReactionEmoji,
+) -> Result<Reaction, AppError> {
+    require_member(pool, team_id, requester_id).await?;
+    require_incident(pool, team_id, incident_id).await?;
+    require_timeline_entry(pool, incident_id, entry_id).await?;
+
+    repo::insert_reaction(pool, Uuid::now_v7(), entry_id, requester_id, &emoji).await
+}
+
+pub async fn remove_reaction(
+    pool: &PgPool,
+    team_id: Uuid,
+    incident_id: Uuid,
+    entry_id: Uuid,
+    requester_id: Uuid,
+    emoji: ReactionEmoji,
+) -> Result<(), AppError> {
+    require_member(pool, team_id, requester_id).await?;
+    require_incident(pool, team_id, incident_id).await?;
+    require_timeline_entry(pool, incident_id, entry_id).await?;
+
+    repo::delete_reaction(pool, entry_id, requester_id, &emoji).await
+}
+
+pub async fn get_reactions(
+    pool: &PgPool,
+    team_id: Uuid,
+    incident_id: Uuid,
+    requester_id: Uuid,
+) -> Result<Vec<ReactionSummary>, AppError> {
+    require_member(pool, team_id, requester_id).await?;
+    require_incident(pool, team_id, incident_id).await?;
+
+    let reactions = repo::find_reactions_by_incident_id(pool, incident_id).await?;
+
+    Ok(summarize_reactions(&reactions, requester_id))
 }
 
 async fn require_member(
@@ -345,4 +390,20 @@ async fn require_release(
     }
 
     Ok(release)
+}
+
+async fn require_timeline_entry(
+    pool: &PgPool,
+    incident_id: Uuid,
+    entry_id: Uuid,
+) -> Result<TimelineEntry, AppError> {
+    let entry = repo::find_timeline_entry_by_id(pool, entry_id)
+        .await?
+        .ok_or(AppError::NotFound("Timeline entry not found".into()))?;
+
+    if entry.incident_id != incident_id {
+        return Err(AppError::NotFound("Timeline entry not found".into()));
+    }
+
+    Ok(entry)
 }

@@ -6,8 +6,10 @@ import { Eye } from "lucide-react";
 import { useMe } from "@/features/auth";
 import { useTeamMembers } from "@/features/teams";
 import {
+  useAvailableEmojis,
   useIncident,
   useIncidentRealtime,
+  useReactions,
   useTimelineEntries,
 } from "@/features/incidents";
 import { useRelease } from "@/features/releases";
@@ -26,6 +28,8 @@ export default function IncidentDetailPage({
   const { data: members } = useTeamMembers(teamId);
   const { data: incident, isLoading } = useIncident(teamId, incidentId);
   const { data: timeline } = useTimelineEntries(teamId, incidentId);
+  const { data: availableEmojis } = useAvailableEmojis();
+  const { data: reactions } = useReactions(teamId, incidentId);
   const { data: linkedRelease } = useRelease(
     teamId,
     incident?.release_id ?? "",
@@ -111,6 +115,8 @@ export default function IncidentDetailPage({
         members={members ?? []}
         currentUserId={user?.id ?? ""}
         currentUserRole={currentMember?.role}
+        availableEmojis={availableEmojis ?? []}
+        reactions={reactions ?? []}
       />
     </div>
   );

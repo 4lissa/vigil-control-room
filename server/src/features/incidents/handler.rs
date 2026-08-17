@@ -7,9 +7,11 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::features::incidents::dto::{
-    AddTimelineEntryRequest, AssignResponderRequest, CreateIncidentRequest,
-    EditTimelineEntryRequest, EscalateIncidentRequest, IncidentResponse, TimelineEntryResponse,
+    AddReactionRequest, AddTimelineEntryRequest, AssignResponderRequest, CreateIncidentRequest,
+    EditTimelineEntryRequest, EmojiDto, EscalateIncidentRequest, IncidentResponse,
+    ReactionResponse, ReactionSummaryResponse, TimelineEntryResponse,
 };
+use crate::features::incidents::model::ReactionEmoji;
 use crate::features::incidents::service;
 use crate::shared::error::{AppError, validation_message};
 use crate::shared::middleware::AuthUser;
@@ -283,4 +285,84 @@ pub async fn edit_timeline_entry(
         .await;
 
     Ok(Json(entry.into()))
+}
+
+pub async fn list_available_emojis() -> Json<Vec<EmojiDto>> {
+    Json(ReactionEmoji::all().into_iter().map(Into::into).collect())
+}
+
+pub async fn list_reactions(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    Path((team_id, incident_id)): Path<(Uuid, Uuid)>,
+) -> Result<Json<Vec<ReactionSummaryResponse>>, AppError> {
+    let summaries =
+        service::get_reactions(&state.db, team_id, incident_id, auth_user.user_id).await?;
+
+    Ok(Json(summaries.into_iter().map(Into::into).collect()))
+}
+
+pub async fn add_reaction(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    Path((team_id, incident_id, entry_id)): Path<(Uuid, Uuid, Uuid)>,
+    Json(req): Json<AddReactionRequest>,
+) -> Result<(StatusCode, Json<ReactionResponse>), AppError> {
+    let reaction = service::add_reaction(
+        &state.db,
+        team_id,
+        incident_id,
+        entry_id,
+        auth_user.user_id,
+        req.emoji.into(),
+    )
+    .await?;
+
+    state
+        .hub
+        .broadcast_to_team(
+            team_id,
+            &WsEvent::ReactionAdded {
+                incident_id,
+                entry_id,
+                emoji: reaction.emoji.as_str().to_string(),
+                by: auth_user.username.clone(),
+            },
+        )
+        .await;
+
+    Ok((StatusCode::CREATED, Json(reaction.into())))
+}
+
+pub async fn remove_reaction(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    Path((team_id, incident_id, entry_id, emoji)): Path<(Uuid, Uuid, Uuid, EmojiDto)>,
+) -> Result<StatusCode, AppError> {
+    let emoji: ReactionEmoji = emoji.into();
+
+    service::remove_reaction(
+        &state.db,
+        team_id,
+        incident_id,
+        entry_id,
+        auth_user.user_id,
+        emoji,
+    )
+    .await?;
+
+    state
+        .hub
+        .broadcast_to_team(
+            team_id,
+            &WsEvent::ReactionRemoved {
+                incident_id,
+                entry_id,
+                emoji: emoji.as_str().to_string(),
+                by: auth_user.username.clone(),
+            },
+        )
+        .await;
+
+    Ok(StatusCode::NO_CONTENT)
 }

@@ -1,6 +1,6 @@
 use axum::{
     Router,
-    routing::{get, patch, post},
+    routing::{delete, get, patch, post},
 };
 
 use crate::features::incidents::handler;
@@ -39,5 +39,18 @@ pub fn router() -> Router<AppState> {
         .route(
             "/teams/{team_id}/incidents/{incident_id}/timeline/{entry_id}",
             patch(handler::edit_timeline_entry),
+        )
+        .route("/reactions/available", get(handler::list_available_emojis))
+        .route(
+            "/teams/{team_id}/incidents/{incident_id}/timeline/reactions",
+            get(handler::list_reactions),
+        )
+        .route(
+            "/teams/{team_id}/incidents/{incident_id}/timeline/{entry_id}/reactions",
+            post(handler::add_reaction),
+        )
+        .route(
+            "/teams/{team_id}/incidents/{incident_id}/timeline/{entry_id}/reactions/{emoji}",
+            delete(handler::remove_reaction),
         )
 }

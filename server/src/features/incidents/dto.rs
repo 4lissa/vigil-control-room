@@ -2,7 +2,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::features::incidents::model::{Incident, IncidentState, Severity, TimelineEntry};
+use crate::features::incidents::model::{
+    Incident, IncidentState, Reaction, ReactionEmoji, ReactionSummary, Severity, TimelineEntry,
+};
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateIncidentRequest {
@@ -34,6 +36,11 @@ pub struct AddTimelineEntryRequest {
 pub struct EditTimelineEntryRequest {
     #[validate(length(min = 1, max = 2000))]
     pub content: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AddReactionRequest {
+    pub emoji: EmojiDto,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -83,6 +90,48 @@ impl From<IncidentState> for IncidentStateDto {
             IncidentState::Acknowledged => IncidentStateDto::Acknowledged,
             IncidentState::Escalated => IncidentStateDto::Escalated,
             IncidentState::Resolved => IncidentStateDto::Resolved,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub enum EmojiDto {
+    #[serde(rename = "+1")]
+    ThumbsUp,
+    #[serde(rename = "-1")]
+    ThumbsDown,
+    #[serde(rename = "eyes")]
+    Eyes,
+    #[serde(rename = "warning")]
+    Warning,
+    #[serde(rename = "check")]
+    Check,
+    #[serde(rename = "fire")]
+    Fire,
+}
+
+impl From<EmojiDto> for ReactionEmoji {
+    fn from(dto: EmojiDto) -> Self {
+        match dto {
+            EmojiDto::ThumbsUp => ReactionEmoji::ThumbsUp,
+            EmojiDto::ThumbsDown => ReactionEmoji::ThumbsDown,
+            EmojiDto::Eyes => ReactionEmoji::Eyes,
+            EmojiDto::Warning => ReactionEmoji::Warning,
+            EmojiDto::Check => ReactionEmoji::Check,
+            EmojiDto::Fire => ReactionEmoji::Fire,
+        }
+    }
+}
+
+impl From<ReactionEmoji> for EmojiDto {
+    fn from(emoji: ReactionEmoji) -> Self {
+        match emoji {
+            ReactionEmoji::ThumbsUp => EmojiDto::ThumbsUp,
+            ReactionEmoji::ThumbsDown => EmojiDto::ThumbsDown,
+            ReactionEmoji::Eyes => EmojiDto::Eyes,
+            ReactionEmoji::Warning => EmojiDto::Warning,
+            ReactionEmoji::Check => EmojiDto::Check,
+            ReactionEmoji::Fire => EmojiDto::Fire,
         }
     }
 }
@@ -139,6 +188,46 @@ impl From<TimelineEntry> for TimelineEntryResponse {
             content: entry.content,
             created_at: entry.created_at.unix_timestamp(),
             edited_at: entry.edited_at.map(|t| t.unix_timestamp()),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReactionResponse {
+    pub id: Uuid,
+    pub entry_id: Uuid,
+    pub user_id: Uuid,
+    pub emoji: EmojiDto,
+    pub created_at: i64,
+}
+
+impl From<Reaction> for ReactionResponse {
+    fn from(reaction: Reaction) -> Self {
+        Self {
+            id: reaction.id,
+            entry_id: reaction.entry_id,
+            user_id: reaction.user_id,
+            emoji: reaction.emoji.into(),
+            created_at: reaction.created_at.unix_timestamp(),
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReactionSummaryResponse {
+    pub entry_id: Uuid,
+    pub emoji: EmojiDto,
+    pub usernames: Vec<String>,
+    pub reacted_by_me: bool,
+}
+
+impl From<ReactionSummary> for ReactionSummaryResponse {
+    fn from(summary: ReactionSummary) -> Self {
+        Self {
+            entry_id: summary.entry_id,
+            emoji: summary.emoji.into(),
+            usernames: summary.usernames,
+            reacted_by_me: summary.reacted_by_me,
         }
     }
 }
@@ -255,5 +344,53 @@ mod tests {
         assert_eq!(response.id, id);
         assert_eq!(response.content, "Investigating");
         assert!(response.edited_at.is_none());
+    }
+
+    #[test]
+    fn emoji_dto_round_trips_through_reaction_emoji() {
+        let emoji: ReactionEmoji = EmojiDto::ThumbsUp.into();
+        assert_eq!(emoji, ReactionEmoji::ThumbsUp);
+
+        let dto: EmojiDto = emoji.into();
+        assert_eq!(dto, EmojiDto::ThumbsUp);
+    }
+
+    #[test]
+    fn emoji_dto_serializes_to_the_short_code() {
+        let json = serde_json::to_string(&EmojiDto::ThumbsUp).unwrap();
+        assert_eq!(json, r#""+1""#);
+    }
+
+    #[test]
+    fn reaction_response_from_reaction_maps_fields() {
+        let reaction = Reaction {
+            id: Uuid::now_v7(),
+            entry_id: Uuid::now_v7(),
+            user_id: Uuid::now_v7(),
+            emoji: ReactionEmoji::Fire,
+            created_at: OffsetDateTime::now_utc(),
+        };
+        let id = reaction.id;
+
+        let response: ReactionResponse = reaction.into();
+
+        assert_eq!(response.id, id);
+        assert_eq!(response.emoji, EmojiDto::Fire);
+    }
+
+    #[test]
+    fn reaction_summary_response_from_summary_maps_fields() {
+        let summary = ReactionSummary {
+            entry_id: Uuid::now_v7(),
+            emoji: ReactionEmoji::Eyes,
+            usernames: vec!["alissa".into(), "bob".into()],
+            reacted_by_me: true,
+        };
+
+        let response: ReactionSummaryResponse = summary.into();
+
+        assert_eq!(response.emoji, EmojiDto::Eyes);
+        assert_eq!(response.usernames, vec!["alissa", "bob"]);
+        assert!(response.reacted_by_me);
     }
 }
