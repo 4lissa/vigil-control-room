@@ -345,3 +345,206 @@ async fn edit_timeline_entry_returns_403_for_non_author(pool: PgPool) {
 
     assert_eq!(response.status(), StatusCode::FORBIDDEN);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn list_available_emojis_returns_200(pool: PgPool) {
+    let (_, session) = common::create_test_user(&pool).await;
+
+    let app = common::build_test_app(pool);
+    let response =
+        common::get_with_token(app, "/reactions/available", &session.id.to_string()).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let emojis = body.as_array().unwrap();
+    assert_eq!(emojis.len(), 6);
+    assert!(emojis.contains(&serde_json::json!("+1")));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn add_reaction_returns_201_for_observer(pool: PgPool) {
+    let (user1, session1) = common::create_test_user(&pool).await;
+    let (_, session2) = common::create_test_user_with(&pool, "bob", "bob@example.com").await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user1.id).await;
+
+    let app = common::build_test_app(pool.clone());
+    let invite = common::post_with_token(
+        app,
+        &format!("/teams/{}/invite", team.id),
+        &session1.id.to_string(),
+    )
+    .await;
+    let body = to_bytes(invite.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let code = body["invitation_code"].as_str().unwrap().to_string();
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        "/teams/join",
+        &session2.id.to_string(),
+        json!({ "code": code }),
+    )
+    .await;
+
+    let app = common::build_test_app(pool.clone());
+    let res = common::post_json_with_token(
+        app,
+        &format!("/teams/{}/incidents", team.id),
+        &session1.id.to_string(),
+        json!({ "title": "DB down", "severity": "high" }),
+    )
+    .await;
+    let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let incident_id = body["id"].as_str().unwrap();
+
+    let app = common::build_test_app(pool.clone());
+    let res = common::post_json_with_token(
+        app,
+        &format!("/teams/{}/incidents/{}/timeline", team.id, incident_id),
+        &session1.id.to_string(),
+        json!({ "content": "Initial note" }),
+    )
+    .await;
+    let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let entry_id = body["id"].as_str().unwrap();
+
+    let app = common::build_test_app(pool);
+    let response = common::post_json_with_token(
+        app,
+        &format!(
+            "/teams/{}/incidents/{}/timeline/{}/reactions",
+            team.id, incident_id, entry_id
+        ),
+        &session2.id.to_string(),
+        json!({ "emoji": "+1" }),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(body["emoji"], "+1");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn list_reactions_returns_aggregated_summary(pool: PgPool) {
+    let (user, session) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+    let token = session.id.to_string();
+
+    let app = common::build_test_app(pool.clone());
+    let res = common::post_json_with_token(
+        app,
+        &format!("/teams/{}/incidents", team.id),
+        &token,
+        json!({ "title": "DB down", "severity": "high" }),
+    )
+    .await;
+    let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let incident_id = body["id"].as_str().unwrap();
+
+    let app = common::build_test_app(pool.clone());
+    let res = common::post_json_with_token(
+        app,
+        &format!("/teams/{}/incidents/{}/timeline", team.id, incident_id),
+        &token,
+        json!({ "content": "Initial note" }),
+    )
+    .await;
+    let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let entry_id = body["id"].as_str().unwrap();
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        &format!(
+            "/teams/{}/incidents/{}/timeline/{}/reactions",
+            team.id, incident_id, entry_id
+        ),
+        &token,
+        json!({ "emoji": "fire" }),
+    )
+    .await;
+
+    let app = common::build_test_app(pool);
+    let response = common::get_with_token(
+        app,
+        &format!(
+            "/teams/{}/incidents/{}/timeline/reactions",
+            team.id, incident_id
+        ),
+        &token,
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let summaries = body.as_array().unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0]["emoji"], "fire");
+    assert_eq!(summaries[0]["usernames"], serde_json::json!(["alissa"]));
+    assert_eq!(summaries[0]["reacted_by_me"], true);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn remove_reaction_returns_204(pool: PgPool) {
+    let (user, session) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+    let token = session.id.to_string();
+
+    let app = common::build_test_app(pool.clone());
+    let res = common::post_json_with_token(
+        app,
+        &format!("/teams/{}/incidents", team.id),
+        &token,
+        json!({ "title": "DB down", "severity": "high" }),
+    )
+    .await;
+    let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let incident_id = body["id"].as_str().unwrap();
+
+    let app = common::build_test_app(pool.clone());
+    let res = common::post_json_with_token(
+        app,
+        &format!("/teams/{}/incidents/{}/timeline", team.id, incident_id),
+        &token,
+        json!({ "content": "Initial note" }),
+    )
+    .await;
+    let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let entry_id = body["id"].as_str().unwrap();
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        &format!(
+            "/teams/{}/incidents/{}/timeline/{}/reactions",
+            team.id, incident_id, entry_id
+        ),
+        &token,
+        json!({ "emoji": "check" }),
+    )
+    .await;
+
+    let app = common::build_test_app(pool);
+    let response = common::delete_with_token(
+        app,
+        &format!(
+            "/teams/{}/incidents/{}/timeline/{}/reactions/check",
+            team.id, incident_id, entry_id
+        ),
+        &token,
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
