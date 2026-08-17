@@ -48,6 +48,13 @@ export type WsEvent =
       type: "release_state_changed";
       release_id: string;
       new_state: string;
+    }
+  | {
+      type: "private_message_received";
+      from: string;
+      to: string;
+      content: string;
+      at: number;
     };
 
 export type ClientMessage =
