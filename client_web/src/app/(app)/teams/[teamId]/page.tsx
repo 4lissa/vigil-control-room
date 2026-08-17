@@ -5,6 +5,7 @@ import { useMe } from "@/features/auth";
 import { useTeam, useTeamMembers, setLastTeamId } from "@/features/teams";
 import { TeamMemberList } from "@/features/teams/components/TeamMemberList";
 import { ManagerActions } from "@/features/teams/components/ManagerActions";
+import { BannedMembersList } from "@/features/teams/components/BannedMembersList";
 
 export default function TeamPage({
   params,
@@ -50,14 +51,23 @@ export default function TeamPage({
         )}
       </div>
 
-      <TeamMemberList members={members} currentUserId={user?.id ?? ""} />
+      <TeamMemberList
+        teamId={teamId}
+        teamName={team.name}
+        members={members}
+        currentUserId={user?.id ?? ""}
+        currentUserRole={currentMember?.role}
+      />
 
       {isManager && (
-        <ManagerActions
-          teamId={teamId}
-          members={members}
-          currentUserId={user?.id ?? ""}
-        />
+        <>
+          <BannedMembersList teamId={teamId} />
+          <ManagerActions
+            teamId={teamId}
+            members={members}
+            currentUserId={user?.id ?? ""}
+          />
+        </>
       )}
     </div>
   );

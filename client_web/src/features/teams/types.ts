@@ -12,6 +12,10 @@ export interface TransferManagerRequest {
   user_id: string;
 }
 
+export interface BanMemberRequest {
+  until: number | null;
+}
+
 export interface TeamResponse {
   id: string;
   name: string;
@@ -35,4 +39,14 @@ export interface TeamMemberResponse {
 export interface TeamMembershipResponse {
   team: TeamResponse;
   member: TeamMemberResponse;
+}
+
+export interface TeamBanResponse {
+  id: string;
+  team_id: string;
+  user_id: string;
+  username: string;
+  banned_by: string | null;
+  until: number | null;
+  created_at: number;
 }

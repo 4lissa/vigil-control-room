@@ -8,10 +8,14 @@ import {
   useTeams,
   useTeam,
   useTeamMembers,
+  useTeamBans,
   useCreateTeam,
   useJoinTeam,
   useGenerateInviteCode,
   useTransferManager,
+  useKickMember,
+  useBanMember,
+  useUnbanMember,
 } from "./hooks";
 
 const createWrapper = () => {
@@ -196,5 +200,109 @@ describe("useTransferManager", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe("Member not found");
+  });
+});
+
+describe("useTeamBans", () => {
+  it("fetches banned members for a team", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useTeamBans("team-123"), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data![0]).toMatchObject({ username: "bob" });
+  });
+});
+
+describe("useKickMember", () => {
+  it("invalidates the team members cache on success", async () => {
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData(["teams", "team-123", "members"], []);
+
+    const { result } = renderHook(() => useKickMember("team-123"), {
+      wrapper,
+    });
+
+    result.current.mutate("user-456");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(
+      queryClient.getQueryState(["teams", "team-123", "members"])
+        ?.isInvalidated,
+    ).toBe(true);
+  });
+
+  it("fails for a non-manager", async () => {
+    server.use(
+      http.post(
+        "http://localhost:8080/teams/:teamId/members/:userId/kick",
+        () => {
+          return HttpResponse.json(
+            {
+              error: {
+                code: "FORBIDDEN",
+                message: "Only managers can kick a member",
+              },
+            },
+            { status: 403 },
+          );
+        },
+      ),
+    );
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useKickMember("team-123"), {
+      wrapper,
+    });
+
+    result.current.mutate("user-456");
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe(
+      "Only managers can kick a member",
+    );
+  });
+});
+
+describe("useBanMember", () => {
+  it("invalidates the team cache on success", async () => {
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData(["teams", "team-123", "members"], []);
+
+    const { result } = renderHook(() => useBanMember("team-123"), {
+      wrapper,
+    });
+
+    result.current.mutate({ userId: "user-456", body: { until: null } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(
+      queryClient.getQueryState(["teams", "team-123", "members"])
+        ?.isInvalidated,
+    ).toBe(true);
+  });
+});
+
+describe("useUnbanMember", () => {
+  it("invalidates the bans cache on success", async () => {
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData(["teams", "team-123", "bans"], []);
+
+    const { result } = renderHook(() => useUnbanMember("team-123"), {
+      wrapper,
+    });
+
+    result.current.mutate("user-456");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(
+      queryClient.getQueryState(["teams", "team-123", "bans"])?.isInvalidated,
+    ).toBe(true);
   });
 });

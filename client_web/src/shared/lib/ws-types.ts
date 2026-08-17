@@ -55,6 +55,25 @@ export type WsEvent =
       to: string;
       content: string;
       at: number;
+    }
+  | {
+      type: "member_joined";
+      team_id: string;
+      member: string;
+      role: string;
+    }
+  | {
+      type: "member_kicked";
+      team_id: string;
+      member: string;
+      by: string;
+    }
+  | {
+      type: "member_banned";
+      team_id: string;
+      member: string;
+      until: number | null;
+      by: string;
     };
 
 export type ClientMessage =

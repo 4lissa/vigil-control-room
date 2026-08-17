@@ -52,6 +52,22 @@ pub enum WsEvent {
         content: String,
         at: i64,
     },
+    MemberJoined {
+        team_id: Uuid,
+        member: String,
+        role: String,
+    },
+    MemberKicked {
+        team_id: Uuid,
+        member: String,
+        by: String,
+    },
+    MemberBanned {
+        team_id: Uuid,
+        member: String,
+        until: Option<i64>,
+        by: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -98,6 +114,31 @@ mod tests {
             json,
             r#"{"type":"private_message_received","from":"alissa","to":"bob","content":"hey","at":1718000000}"#
         );
+    }
+
+    #[test]
+    fn member_joined_serializes_correctly() {
+        let event = WsEvent::MemberJoined {
+            team_id: Uuid::nil(),
+            member: "alissa".into(),
+            role: "observer".into(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains(r#""type":"member_joined""#));
+        assert!(json.contains(r#""role":"observer""#));
+    }
+
+    #[test]
+    fn member_banned_serializes_correctly() {
+        let event = WsEvent::MemberBanned {
+            team_id: Uuid::nil(),
+            member: "alissa".into(),
+            until: None,
+            by: "bob".into(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains(r#""type":"member_banned""#));
+        assert!(json.contains(r#""until":null"#));
     }
 
     #[test]

@@ -1,9 +1,11 @@
 import { apiClient } from "@/shared/lib/api-client";
 import {
+  BanMemberRequest,
   CreateTeamRequest,
   TeamMembershipResponse,
   InviteCodeResponse,
   JoinTeamRequest,
+  TeamBanResponse,
   TeamMemberResponse,
   TeamResponse,
   TransferManagerRequest,
@@ -45,3 +47,31 @@ export const transferManager = (
   token: string,
 ): Promise<void> =>
   apiClient.post<void>(`/teams/${teamId}/transfer`, body, token);
+
+export const kickMember = (
+  teamId: string,
+  userId: string,
+  token: string,
+): Promise<void> =>
+  apiClient.post<void>(`/teams/${teamId}/members/${userId}/kick`, {}, token);
+
+export const banMember = (
+  teamId: string,
+  userId: string,
+  body: BanMemberRequest,
+  token: string,
+): Promise<void> =>
+  apiClient.post<void>(`/teams/${teamId}/members/${userId}/ban`, body, token);
+
+export const unbanMember = (
+  teamId: string,
+  userId: string,
+  token: string,
+): Promise<void> =>
+  apiClient.delete<void>(`/teams/${teamId}/members/${userId}/ban`, token);
+
+export const getTeamBans = (
+  teamId: string,
+  token: string,
+): Promise<TeamBanResponse[]> =>
+  apiClient.get<TeamBanResponse[]>(`/teams/${teamId}/bans`, token);
