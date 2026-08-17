@@ -70,7 +70,7 @@ export const ReactionBar = ({
                     : `React with ${emoji}`
                 }
                 onClick={() => toggle(emoji, reacted)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-caption transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-caption transition-colors disabled:opacity-50 disabled:cursor-wait ${
                   reacted
                     ? "border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-accent)]"
                     : "border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-border-strong)]"
