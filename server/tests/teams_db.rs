@@ -4,6 +4,21 @@ use sqlx::PgPool;
 use vigil_server::features::teams::{model::Role, service};
 use vigil_server::shared::error::AppError;
 
+async fn create_team_with_member(pool: &PgPool) -> (uuid::Uuid, uuid::Uuid, uuid::Uuid) {
+    let (user1, _) = common::create_test_user(pool).await;
+    let (user2, _) = common::create_test_user_with(pool, "bob", "bob@example.com").await;
+    let (team, _) = service::create_team(pool, "My Team", user1.id)
+        .await
+        .unwrap();
+
+    let code = service::generate_invitation_code_for_team(pool, team.id, user1.id)
+        .await
+        .unwrap();
+    service::join_team(pool, &code, user2.id).await.unwrap();
+
+    (team.id, user1.id, user2.id)
+}
+
 #[sqlx::test(migrations = "./migrations")]
 async fn create_team_succeeds(pool: PgPool) {
     let (user, _) = common::create_test_user(&pool).await;
@@ -149,4 +164,179 @@ async fn transfer_manager_fails_to_self(pool: PgPool) {
 
     let result = service::transfer_manager(&pool, team.id, user.id, user.id).await;
     assert!(matches!(result, Err(AppError::BadRequest(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn kick_member_removes_the_member(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    service::kick_member(&pool, team_id, manager_id, member_id)
+        .await
+        .unwrap();
+
+    let members = service::get_members(&pool, team_id, manager_id)
+        .await
+        .unwrap();
+    assert!(!members.iter().any(|m| m.user_id == member_id));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn kick_member_fails_for_non_manager(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    let result = service::kick_member(&pool, team_id, member_id, manager_id).await;
+    assert!(matches!(result, Err(AppError::Forbidden(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn kick_member_fails_to_self(pool: PgPool) {
+    let (team_id, manager_id, _) = create_team_with_member(&pool).await;
+
+    let result = service::kick_member(&pool, team_id, manager_id, manager_id).await;
+    assert!(matches!(result, Err(AppError::BadRequest(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn kick_member_fails_for_non_member_target(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (other, _) = common::create_test_user_with(&pool, "bob", "bob@example.com").await;
+    let (team, _) = service::create_team(&pool, "My Team", user.id)
+        .await
+        .unwrap();
+
+    let result = service::kick_member(&pool, team.id, user.id, other.id).await;
+    assert!(matches!(result, Err(AppError::NotFound(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn kicked_member_can_rejoin_immediately(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    service::kick_member(&pool, team_id, manager_id, member_id)
+        .await
+        .unwrap();
+
+    let code = service::generate_invitation_code_for_team(&pool, team_id, manager_id)
+        .await
+        .unwrap();
+
+    let result = service::join_team(&pool, &code, member_id).await;
+    assert!(result.is_ok());
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn ban_member_removes_the_member(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    service::ban_member(&pool, team_id, manager_id, member_id, None)
+        .await
+        .unwrap();
+
+    let members = service::get_members(&pool, team_id, manager_id)
+        .await
+        .unwrap();
+    assert!(!members.iter().any(|m| m.user_id == member_id));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn ban_member_fails_for_non_manager(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    let result = service::ban_member(&pool, team_id, member_id, manager_id, None).await;
+    assert!(matches!(result, Err(AppError::Forbidden(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn ban_member_fails_to_self(pool: PgPool) {
+    let (team_id, manager_id, _) = create_team_with_member(&pool).await;
+
+    let result = service::ban_member(&pool, team_id, manager_id, manager_id, None).await;
+    assert!(matches!(result, Err(AppError::BadRequest(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn ban_member_fails_for_expiration_in_the_past(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    let result = service::ban_member(&pool, team_id, manager_id, member_id, Some(1)).await;
+    assert!(matches!(result, Err(AppError::BadRequest(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn ban_member_fails_for_unknown_user(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = service::create_team(&pool, "My Team", user.id)
+        .await
+        .unwrap();
+
+    let result = service::ban_member(&pool, team.id, user.id, uuid::Uuid::now_v7(), None).await;
+    assert!(matches!(result, Err(AppError::NotFound(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn banned_member_cannot_rejoin(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    service::ban_member(&pool, team_id, manager_id, member_id, None)
+        .await
+        .unwrap();
+
+    let code = service::generate_invitation_code_for_team(&pool, team_id, manager_id)
+        .await
+        .unwrap();
+
+    let result = service::join_team(&pool, &code, member_id).await;
+    assert!(matches!(result, Err(AppError::Forbidden(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn unban_member_lifts_the_ban(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    service::ban_member(&pool, team_id, manager_id, member_id, None)
+        .await
+        .unwrap();
+    service::unban_member(&pool, team_id, manager_id, member_id)
+        .await
+        .unwrap();
+
+    let code = service::generate_invitation_code_for_team(&pool, team_id, manager_id)
+        .await
+        .unwrap();
+
+    let result = service::join_team(&pool, &code, member_id).await;
+    assert!(result.is_ok());
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn unban_member_fails_for_non_manager(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    let result = service::unban_member(&pool, team_id, member_id, manager_id).await;
+    assert!(matches!(result, Err(AppError::Forbidden(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn get_active_bans_returns_banned_users(pool: PgPool) {
+    let (team_id, manager_id, member_id) = create_team_with_member(&pool).await;
+
+    service::ban_member(&pool, team_id, manager_id, member_id, None)
+        .await
+        .unwrap();
+
+    let bans = service::get_active_bans(&pool, team_id, manager_id)
+        .await
+        .unwrap();
+
+    assert_eq!(bans.len(), 1);
+    assert_eq!(bans[0].user_id, member_id);
+    assert_eq!(bans[0].username, "bob");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn get_active_bans_fails_for_non_manager(pool: PgPool) {
+    let (team_id, _, member_id) = create_team_with_member(&pool).await;
+
+    let result = service::get_active_bans(&pool, team_id, member_id).await;
+    assert!(matches!(result, Err(AppError::Forbidden(_))));
 }
