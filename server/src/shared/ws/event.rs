@@ -52,6 +52,18 @@ pub enum WsEvent {
         content: String,
         at: i64,
     },
+    ReactionAdded {
+        incident_id: Uuid,
+        entry_id: Uuid,
+        emoji: String,
+        by: String,
+    },
+    ReactionRemoved {
+        incident_id: Uuid,
+        entry_id: Uuid,
+        emoji: String,
+        by: String,
+    },
     MemberJoined {
         team_id: Uuid,
         member: String,
@@ -139,6 +151,19 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains(r#""type":"member_banned""#));
         assert!(json.contains(r#""until":null"#));
+    }
+
+    #[test]
+    fn reaction_added_serializes_correctly() {
+        let event = WsEvent::ReactionAdded {
+            incident_id: Uuid::nil(),
+            entry_id: Uuid::nil(),
+            emoji: "+1".into(),
+            by: "alissa".into(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains(r#""type":"reaction_added""#));
+        assert!(json.contains(r#""emoji":"+1""#));
     }
 
     #[test]
