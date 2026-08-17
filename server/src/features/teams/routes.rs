@@ -20,4 +20,13 @@ pub fn router() -> Router<AppState> {
             post(handler::generate_invitation_code),
         )
         .route("/teams/{team_id}/transfer", post(handler::transfer_manager))
+        .route("/teams/{team_id}/bans", get(handler::list_bans))
+        .route(
+            "/teams/{team_id}/members/{user_id}/kick",
+            post(handler::kick_member),
+        )
+        .route(
+            "/teams/{team_id}/members/{user_id}/ban",
+            post(handler::ban_member).delete(handler::unban_member),
+        )
 }
