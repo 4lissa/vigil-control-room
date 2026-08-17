@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use time::OffsetDateTime;
 use uuid::Uuid;
 
@@ -40,6 +42,98 @@ pub struct TimelineEntry {
     pub content: String,
     pub created_at: OffsetDateTime,
     pub edited_at: Option<OffsetDateTime>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ReactionEmoji {
+    ThumbsUp,
+    ThumbsDown,
+    Eyes,
+    Warning,
+    Check,
+    Fire,
+}
+
+#[derive(Debug, Clone)]
+pub struct Reaction {
+    pub id: Uuid,
+    pub entry_id: Uuid,
+    pub user_id: Uuid,
+    pub emoji: ReactionEmoji,
+    pub created_at: OffsetDateTime,
+}
+
+#[derive(Debug, Clone)]
+pub struct ReactionWithUsername {
+    pub entry_id: Uuid,
+    pub user_id: Uuid,
+    pub username: String,
+    pub emoji: ReactionEmoji,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReactionSummary {
+    pub entry_id: Uuid,
+    pub emoji: ReactionEmoji,
+    pub usernames: Vec<String>,
+    pub reacted_by_me: bool,
+}
+
+impl ReactionEmoji {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ReactionEmoji::ThumbsUp => "+1",
+            ReactionEmoji::ThumbsDown => "-1",
+            ReactionEmoji::Eyes => "eyes",
+            ReactionEmoji::Warning => "warning",
+            ReactionEmoji::Check => "check",
+            ReactionEmoji::Fire => "fire",
+        }
+    }
+
+    pub fn all() -> [ReactionEmoji; 6] {
+        [
+            ReactionEmoji::ThumbsUp,
+            ReactionEmoji::ThumbsDown,
+            ReactionEmoji::Eyes,
+            ReactionEmoji::Warning,
+            ReactionEmoji::Check,
+            ReactionEmoji::Fire,
+        ]
+    }
+}
+
+pub fn summarize_reactions(
+    reactions: &[ReactionWithUsername],
+    requester_id: Uuid,
+) -> Vec<ReactionSummary> {
+    let mut grouped: HashMap<(Uuid, ReactionEmoji), Vec<(Uuid, String)>> = HashMap::new();
+
+    for reaction in reactions {
+        grouped
+            .entry((reaction.entry_id, reaction.emoji))
+            .or_default()
+            .push((reaction.user_id, reaction.username.clone()));
+    }
+
+    let mut summaries: Vec<ReactionSummary> = grouped
+        .into_iter()
+        .map(|((entry_id, emoji), mut reactors)| {
+            let reacted_by_me = reactors.iter().any(|(id, _)| *id == requester_id);
+            reactors.sort_by(|a, b| a.1.cmp(&b.1));
+
+            ReactionSummary {
+                entry_id,
+                emoji,
+                usernames: reactors.into_iter().map(|(_, username)| username).collect(),
+                reacted_by_me,
+            }
+        })
+        .collect();
+
+    summaries.sort_by(|a, b| (a.entry_id, a.emoji.as_str()).cmp(&(b.entry_id, b.emoji.as_str())));
+
+    summaries
 }
 
 impl Severity {
@@ -192,5 +286,73 @@ mod tests {
     fn entry_with_deleted_author_cannot_be_edited() {
         let entry = make_entry(None);
         assert!(!entry.can_edit(Uuid::now_v7()));
+    }
+
+    fn make_reaction(
+        entry_id: Uuid,
+        user_id: Uuid,
+        username: &str,
+        emoji: ReactionEmoji,
+    ) -> ReactionWithUsername {
+        ReactionWithUsername {
+            entry_id,
+            user_id,
+            username: username.into(),
+            emoji,
+        }
+    }
+
+    #[test]
+    fn summarize_reactions_counts_per_emoji() {
+        let entry_id = Uuid::now_v7();
+        let alissa = Uuid::now_v7();
+        let bob = Uuid::now_v7();
+        let reactions = vec![
+            make_reaction(entry_id, alissa, "alissa", ReactionEmoji::ThumbsUp),
+            make_reaction(entry_id, bob, "bob", ReactionEmoji::ThumbsUp),
+            make_reaction(entry_id, bob, "bob", ReactionEmoji::Fire),
+        ];
+
+        let summaries = summarize_reactions(&reactions, alissa);
+
+        let thumbs_up = summaries
+            .iter()
+            .find(|s| s.emoji == ReactionEmoji::ThumbsUp)
+            .unwrap();
+        assert_eq!(thumbs_up.usernames, vec!["alissa", "bob"]);
+        assert!(thumbs_up.reacted_by_me);
+
+        let fire = summaries
+            .iter()
+            .find(|s| s.emoji == ReactionEmoji::Fire)
+            .unwrap();
+        assert_eq!(fire.usernames, vec!["bob"]);
+        assert!(!fire.reacted_by_me);
+    }
+
+    #[test]
+    fn summarize_reactions_keeps_entries_separate() {
+        let entry_a = Uuid::now_v7();
+        let entry_b = Uuid::now_v7();
+        let user_id = Uuid::now_v7();
+        let reactions = vec![
+            make_reaction(entry_a, user_id, "alissa", ReactionEmoji::Eyes),
+            make_reaction(entry_b, user_id, "alissa", ReactionEmoji::Eyes),
+        ];
+
+        let summaries = summarize_reactions(&reactions, user_id);
+
+        assert_eq!(summaries.len(), 2);
+        assert!(
+            summaries
+                .iter()
+                .all(|s| s.usernames == vec!["alissa"] && s.reacted_by_me)
+        );
+    }
+
+    #[test]
+    fn summarize_reactions_returns_empty_for_no_reactions() {
+        let summaries = summarize_reactions(&[], Uuid::now_v7());
+        assert!(summaries.is_empty());
     }
 }
