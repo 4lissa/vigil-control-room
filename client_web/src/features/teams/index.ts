@@ -8,6 +8,11 @@ export {
   useGenerateInviteCode,
   useTransferManager,
   useDefaultTeamId,
+  useTeamBans,
+  useKickMember,
+  useBanMember,
+  useUnbanMember,
+  useTeamRealtime,
 } from "./hooks";
 export type {
   TeamRole,
@@ -18,4 +23,6 @@ export type {
   InviteCodeResponse,
   JoinTeamRequest,
   TransferManagerRequest,
+  BanMemberRequest,
+  TeamBanResponse,
 } from "./types";
