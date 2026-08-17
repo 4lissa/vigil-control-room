@@ -20,6 +20,16 @@ const mockMemberWithUsername = {
   username: "alissa",
 };
 
+const mockBan = {
+  id: "ban-123",
+  team_id: "team-123",
+  user_id: "456",
+  username: "bob",
+  banned_by: "123",
+  until: null,
+  created_at: 1755000000,
+};
+
 export const teamsHandlers = [
   http.get("http://localhost:8080/teams", () => {
     return HttpResponse.json([mockTeam]);
@@ -49,6 +59,22 @@ export const teamsHandlers = [
   }),
 
   http.post("http://localhost:8080/teams/:teamId/transfer", () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.get("http://localhost:8080/teams/:teamId/bans", () => {
+    return HttpResponse.json([mockBan]);
+  }),
+
+  http.post("http://localhost:8080/teams/:teamId/members/:userId/kick", () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post("http://localhost:8080/teams/:teamId/members/:userId/ban", () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete("http://localhost:8080/teams/:teamId/members/:userId/ban", () => {
     return new HttpResponse(null, { status: 204 });
   }),
 ];
