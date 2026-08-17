@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 import { useAddTimelineEntry, useEditTimelineEntry } from "../hooks";
-import { TimelineEntryResponse } from "../types";
+import {
+  Emoji,
+  ReactionSummaryResponse,
+  TimelineEntryResponse,
+} from "../types";
 import { TeamMemberResponse, TeamRole } from "@/features/teams";
 import { Button } from "@/shared/ui/Button";
+import { ReactionBar } from "./ReactionBar";
 
 interface TimelineProps {
   teamId: string;
@@ -13,6 +18,8 @@ interface TimelineProps {
   members: TeamMemberResponse[];
   currentUserId: string;
   currentUserRole: TeamRole | undefined;
+  availableEmojis: Emoji[];
+  reactions: ReactionSummaryResponse[];
 }
 
 const authorName = (authorId: string | null, members: TeamMemberResponse[]) => {
@@ -36,12 +43,16 @@ const TimelineEntry = ({
   canEdit,
   teamId,
   incidentId,
+  availableEmojis,
+  reactions,
 }: {
   entry: TimelineEntryResponse;
   members: TeamMemberResponse[];
   canEdit: boolean;
   teamId: string;
   incidentId: string;
+  availableEmojis: Emoji[];
+  reactions: ReactionSummaryResponse[];
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const {
@@ -120,6 +131,14 @@ const TimelineEntry = ({
           {entry.content}
         </p>
       )}
+
+      <ReactionBar
+        teamId={teamId}
+        incidentId={incidentId}
+        entryId={entry.id}
+        availableEmojis={availableEmojis}
+        reactions={reactions}
+      />
     </div>
   );
 };
@@ -131,6 +150,8 @@ export const Timeline = ({
   members,
   currentUserId,
   currentUserRole,
+  availableEmojis,
+  reactions,
 }: TimelineProps) => {
   const {
     mutate: addEntry,
@@ -176,6 +197,8 @@ export const Timeline = ({
               canEdit={entry.author_id === currentUserId}
               teamId={teamId}
               incidentId={incidentId}
+              availableEmojis={availableEmojis}
+              reactions={reactions.filter((r) => r.entry_id === entry.id)}
             />
           ))}
         </div>
