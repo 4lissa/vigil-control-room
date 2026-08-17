@@ -3,8 +3,22 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMe } from "@/features/auth/hooks";
+import { useTeamRealtime } from "@/features/teams";
 import { Navbar } from "@/shared/ui/Navbar";
 import { WebSocketProvider } from "@/shared/providers/WebSocketProvider";
+
+function AppContent({ children }: { children: React.ReactNode }) {
+  const { data: user } = useMe();
+
+  useTeamRealtime(user?.username);
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1 p-6">{children}</main>
+    </div>
+  );
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -18,10 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <WebSocketProvider>
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 p-6">{children}</main>
-      </div>
+      <AppContent>{children}</AppContent>
     </WebSocketProvider>
   );
 }
