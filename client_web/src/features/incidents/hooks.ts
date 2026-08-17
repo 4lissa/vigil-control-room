@@ -4,14 +4,18 @@ import { getToken } from "@/features/auth/token";
 import { useWebSocket } from "@/shared/providers/WebSocketProvider";
 import {
   acknowledgeIncident,
+  addReaction,
   addTimelineEntry,
   assignResponder,
   createIncident,
   editTimelineEntry,
   escalateIncident,
+  getAvailableEmojis,
   getIncident,
   getIncidents,
+  getReactions,
   getTimelineEntries,
+  removeReaction,
   resolveIncident,
 } from "./api";
 import {
@@ -19,6 +23,7 @@ import {
   AssignResponderRequest,
   CreateIncidentRequest,
   EditTimelineEntryRequest,
+  Emoji,
   EscalateIncidentRequest,
 } from "./types";
 
@@ -139,6 +144,47 @@ export const useEditTimelineEntry = (teamId: string, incidentId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["teams", teamId, "incidents", incidentId, "timeline"],
+      });
+    },
+  });
+};
+
+export const useAvailableEmojis = () =>
+  useQuery({
+    queryKey: ["reactions", "available"],
+    queryFn: () => getAvailableEmojis(getToken()!),
+  });
+
+export const useReactions = (teamId: string, incidentId: string) =>
+  useQuery({
+    queryKey: ["teams", teamId, "incidents", incidentId, "reactions"],
+    queryFn: () => getReactions(teamId, incidentId, getToken()!),
+    enabled: !!teamId && !!incidentId,
+  });
+
+export const useAddReaction = (teamId: string, incidentId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ entryId, emoji }: { entryId: string; emoji: Emoji }) =>
+      addReaction(teamId, incidentId, entryId, { emoji }, getToken()!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["teams", teamId, "incidents", incidentId, "reactions"],
+      });
+    },
+  });
+};
+
+export const useRemoveReaction = (teamId: string, incidentId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ entryId, emoji }: { entryId: string; emoji: Emoji }) =>
+      removeReaction(teamId, incidentId, entryId, emoji, getToken()!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["teams", teamId, "incidents", incidentId, "reactions"],
       });
     },
   });
