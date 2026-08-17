@@ -55,6 +55,17 @@ impl TeamBan {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct TeamBanWithUsername {
+    pub id: Uuid,
+    pub team_id: Uuid,
+    pub user_id: Uuid,
+    pub username: String,
+    pub banned_by: Option<Uuid>,
+    pub until: Option<OffsetDateTime>,
+    pub created_at: OffsetDateTime,
+}
+
 impl Role {
     pub fn can_generate_invitation_code(&self) -> bool {
         matches!(self, Role::Manager)
