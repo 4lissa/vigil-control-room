@@ -9,8 +9,10 @@
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests"
+    "test": "vitest run",
+    "test:unit": "vitest run --exclude '**/*.integration.test.*'",
+    "test:integration": "vitest run integration",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.4",
