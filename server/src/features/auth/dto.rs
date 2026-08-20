@@ -22,6 +22,12 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GithubCallbackQuery {
+    pub code: Option<String>,
+    pub state: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateProfileRequest {
     #[validate(length(min = 3, max = 50))]
