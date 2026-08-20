@@ -83,6 +83,119 @@ async fn login_returns_200_with_token(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "./migrations")]
+async fn github_redirect_sets_cookie_and_redirects_to_github(pool: PgPool) {
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    let app = common::build_test_app(pool);
+    let request = Request::builder()
+        .method("GET")
+        .uri("/github")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(location.starts_with("https://github.com/login/oauth/authorize?"));
+
+    let set_cookie = response
+        .headers()
+        .get("set-cookie")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(set_cookie.starts_with("oauth_state="));
+    assert!(set_cookie.contains("HttpOnly"));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn github_callback_redirects_to_login_with_error_without_cookie(pool: PgPool) {
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    let app = common::build_test_app(pool);
+    let request = Request::builder()
+        .method("GET")
+        .uri("/github/callback?code=fakecode&state=fakestate")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(location.ends_with("/login?error=oauth_failed"));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn github_callback_redirects_to_login_with_error_when_state_does_not_match_cookie(
+    pool: PgPool,
+) {
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    let app = common::build_test_app(pool);
+    let request = Request::builder()
+        .method("GET")
+        .uri("/github/callback?code=fakecode&state=wrong-state")
+        .header("Cookie", "oauth_state=correct-state")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(location.ends_with("/login?error=oauth_failed"));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn github_callback_redirects_to_login_with_error_without_code(pool: PgPool) {
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    let app = common::build_test_app(pool);
+    let request = Request::builder()
+        .method("GET")
+        .uri("/github/callback?state=matching-state")
+        .header("Cookie", "oauth_state=matching-state")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+
+    let location = response
+        .headers()
+        .get("location")
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(location.ends_with("/login?error=oauth_failed"));
+}
+
+#[sqlx::test(migrations = "./migrations")]
 async fn me_returns_401_without_token(pool: PgPool) {
     use axum::body::Body;
     use axum::http::Request;
