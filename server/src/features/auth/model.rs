@@ -29,6 +29,20 @@ pub struct SessionWithUsername {
     pub expires_at: OffsetDateTime,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ServiceKind {
+    Github,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectedService {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub service: ServiceKind,
+    pub encrypted_token: Vec<u8>,
+    pub created_at: OffsetDateTime,
+}
+
 impl Session {
     pub fn is_expired(&self) -> bool {
         self.expires_at < OffsetDateTime::now_utc()
@@ -38,6 +52,14 @@ impl Session {
 impl SessionWithUsername {
     pub fn is_expired(&self) -> bool {
         self.expires_at < OffsetDateTime::now_utc()
+    }
+}
+
+impl ServiceKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ServiceKind::Github => "github",
+        }
     }
 }
 
