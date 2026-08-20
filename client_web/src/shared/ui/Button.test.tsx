@@ -43,4 +43,20 @@ describe("Button", () => {
     const spinner = screen.getByRole("button").querySelector(".animate-spin");
     expect(spinner).toBeInTheDocument();
   });
+
+  it("renders as a link when href is set", () => {
+    render(<Button href="/somewhere">Go</Button>);
+    const link = screen.getByRole("link", { name: "Go" });
+    expect(link).toHaveAttribute("href", "/somewhere");
+  });
+
+  it("applies the variant styling when rendered as a link", () => {
+    render(
+      <Button href="/somewhere" variant="primary">
+        Go
+      </Button>,
+    );
+    const link = screen.getByRole("link", { name: "Go" });
+    expect(link.className).toContain("bg-[var(--color-accent)]");
+  });
 });

@@ -3,6 +3,7 @@ import { ButtonHTMLAttributes } from "react";
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "danger";
   isLoading?: boolean;
+  href?: string;
 }
 
 export const Button = ({
@@ -11,6 +12,7 @@ export const Button = ({
   disabled,
   children,
   className = "",
+  href,
   ...props
 }: ButtonProps) => {
   const base = `inline-flex items-center justify-center gap-2 px-4 py-2 text-body font-medium rounded-md border transition-colors focus-visible:outline-none disabled:opacity-50 ${
@@ -26,12 +28,18 @@ export const Button = ({
       "bg-transparent text-[var(--color-danger)] border-[var(--color-danger-border)] hover:bg-[var(--color-danger-bg)]",
   };
 
+  const classes = `${base} ${variants[variant]} ${className}`;
+
+  if (href) {
+    return (
+      <a href={href} className={classes}>
+        {children}
+      </a>
+    );
+  }
+
   return (
-    <button
-      disabled={disabled || isLoading}
-      className={`${base} ${variants[variant]} ${className}`}
-      {...props}
-    >
+    <button disabled={disabled || isLoading} className={classes} {...props}>
       {isLoading ? (
         <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
       ) : null}
