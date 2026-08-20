@@ -6,9 +6,12 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::features::auth::{
-    model::{Session, User},
+    model::{ServiceKind, Session, User},
     repo,
 };
+use crate::shared::clients::github as github_client;
+use crate::shared::config::Config;
+use crate::shared::crypto;
 use crate::shared::error::AppError;
 use sqlx::PgPool;
 
@@ -80,6 +83,100 @@ pub async fn login(
     .await?;
 
     Ok((user, session))
+}
+
+pub fn github_authorize_url(config: &Config) -> (String, String) {
+    github_client::authorize_url(&config.github_client_id, &config.github_redirect_uri)
+}
+
+pub async fn handle_github_callback(
+    pool: &PgPool,
+    http_client: &reqwest::Client,
+    config: &Config,
+    code: &str,
+) -> Result<(User, Session), AppError> {
+    let access_token = github_client::exchange_code_for_token(
+        http_client,
+        &config.github_client_id,
+        &config.github_client_secret,
+        &config.github_redirect_uri,
+        code,
+    )
+    .await?;
+    let profile = github_client::fetch_profile(http_client, &access_token).await?;
+    let github_id = profile.id.to_string();
+
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to begin transaction");
+        AppError::InternalError
+    })?;
+
+    let user = match repo::find_user_by_github_id(&mut *tx, &github_id).await? {
+        Some(user) => user,
+        None => create_user_from_github(&mut tx, &github_id, &profile).await?,
+    };
+
+    let encrypted_token = crypto::encrypt(&config.token_encryption_key, &access_token);
+    repo::upsert_connected_service(
+        &mut *tx,
+        Uuid::now_v7(),
+        user.id,
+        ServiceKind::Github,
+        &encrypted_token,
+    )
+    .await?;
+
+    repo::delete_expired_sessions(&mut *tx, user.id).await?;
+    let session = repo::insert_session(
+        &mut *tx,
+        Uuid::now_v7(),
+        user.id,
+        OffsetDateTime::now_utc() + time::Duration::days(SESSION_DURATION_DAYS),
+    )
+    .await?;
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!(error = ?e, "failed to commit transaction");
+        AppError::InternalError
+    })?;
+
+    Ok((user, session))
+}
+
+async fn create_user_from_github(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    github_id: &str,
+    profile: &github_client::UserProfile,
+) -> Result<User, AppError> {
+    let email = profile.email.clone().ok_or_else(|| {
+        AppError::BadRequest("GitHub account has no accessible email address".into())
+    })?;
+
+    match repo::insert_user(
+        &mut **tx,
+        Uuid::now_v7(),
+        &profile.login,
+        &email,
+        None,
+        Some(github_id),
+    )
+    .await
+    {
+        Ok(user) => Ok(user),
+        Err(AppError::Conflict(_)) => {
+            let username = format!("{}-{}", profile.login, &Uuid::now_v7().to_string()[..8]);
+            repo::insert_user(
+                &mut **tx,
+                Uuid::now_v7(),
+                &username,
+                &email,
+                None,
+                Some(github_id),
+            )
+            .await
+        }
+        Err(e) => Err(e),
+    }
 }
 
 pub async fn logout(pool: &PgPool, session_id: Uuid) -> Result<(), AppError> {
@@ -169,6 +266,41 @@ async fn verify_password(password: &str, hash: &str) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::http::HeaderValue;
+
+    fn test_config() -> Config {
+        Config {
+            database_url: String::new(),
+            server_port: 8080,
+            cors_origin: HeaderValue::from_static("http://localhost:3000"),
+            github_client_id: "client123".into(),
+            github_client_secret: "secret123".into(),
+            github_redirect_uri: "http://localhost:8080/github/callback".into(),
+            token_encryption_key: [0u8; 32],
+        }
+    }
+
+    #[test]
+    fn github_authorize_url_includes_client_id_and_redirect_uri() {
+        let (url, _state) = github_authorize_url(&test_config());
+
+        assert!(url.starts_with("https://github.com/login/oauth/authorize?"));
+        assert!(url.contains("client_id=client123"));
+        assert!(url.contains("redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fgithub%2Fcallback"));
+    }
+
+    #[test]
+    fn github_authorize_url_state_is_reflected_in_the_url() {
+        let (url, state) = github_authorize_url(&test_config());
+        assert!(url.contains(&format!("state={state}")));
+    }
+
+    #[test]
+    fn github_authorize_url_generates_a_distinct_state_each_call() {
+        let (_, state1) = github_authorize_url(&test_config());
+        let (_, state2) = github_authorize_url(&test_config());
+        assert_ne!(state1, state2);
+    }
 
     #[tokio::test]
     async fn hash_then_verify_with_correct_password_succeeds() {
