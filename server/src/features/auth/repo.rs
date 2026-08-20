@@ -2,7 +2,9 @@ use sqlx::PgPool;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
-use crate::features::auth::model::{Session, SessionWithUsername, User};
+use crate::features::auth::model::{
+    ConnectedService, ServiceKind, Session, SessionWithUsername, User,
+};
 use crate::shared::error::AppError;
 
 #[derive(sqlx::FromRow)]
@@ -115,7 +117,7 @@ pub async fn find_user_by_id(pool: &PgPool, id: Uuid) -> Result<Option<User>, Ap
 }
 
 pub async fn find_user_by_github_id(
-    pool: &PgPool,
+    executor: impl sqlx::PgExecutor<'_>,
     github_id: &str,
 ) -> Result<Option<User>, AppError> {
     let row = sqlx::query_as!(
@@ -123,7 +125,7 @@ pub async fn find_user_by_github_id(
         r#"SELECT * FROM users WHERE github_id = $1"#,
         github_id
     )
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await
     .map_err(|e| {
         tracing::error!(error = ?e, %github_id, "failed to find user by github_id");
@@ -266,12 +268,15 @@ pub async fn delete_session(pool: &PgPool, id: Uuid) -> Result<(), AppError> {
     Ok(())
 }
 
-pub async fn delete_expired_sessions(pool: &PgPool, user_id: Uuid) -> Result<(), AppError> {
+pub async fn delete_expired_sessions(
+    executor: impl sqlx::PgExecutor<'_>,
+    user_id: Uuid,
+) -> Result<(), AppError> {
     sqlx::query!(
         r#"DELETE FROM sessions WHERE user_id = $1 AND expires_at < now()"#,
         user_id
     )
-    .execute(pool)
+    .execute(executor)
     .await
     .map_err(|e| {
         tracing::error!(error = ?e, %user_id, "failed to delete expired sessions");
@@ -279,4 +284,71 @@ pub async fn delete_expired_sessions(pool: &PgPool, user_id: Uuid) -> Result<(),
     })?;
 
     Ok(())
+}
+
+#[derive(sqlx::FromRow)]
+struct ConnectedServiceRow {
+    id: Uuid,
+    user_id: Uuid,
+    service: String,
+    encrypted_token: Vec<u8>,
+    created_at: OffsetDateTime,
+}
+
+impl TryFrom<ConnectedServiceRow> for ConnectedService {
+    type Error = AppError;
+
+    fn try_from(row: ConnectedServiceRow) -> Result<Self, AppError> {
+        let service = service_kind_from_str(&row.service).ok_or_else(|| {
+            tracing::error!(service = %row.service, "unknown connected_service value from database");
+            AppError::InternalError
+        })?;
+
+        Ok(Self {
+            id: row.id,
+            user_id: row.user_id,
+            service,
+            encrypted_token: row.encrypted_token,
+            created_at: row.created_at,
+        })
+    }
+}
+
+fn service_kind_from_str(s: &str) -> Option<ServiceKind> {
+    match s {
+        "github" => Some(ServiceKind::Github),
+        _ => None,
+    }
+}
+
+pub async fn upsert_connected_service(
+    executor: impl sqlx::PgExecutor<'_>,
+    id: Uuid,
+    user_id: Uuid,
+    service: ServiceKind,
+    encrypted_token: &[u8],
+) -> Result<ConnectedService, AppError> {
+    let service_str = service.as_str();
+
+    let row = sqlx::query_as!(
+        ConnectedServiceRow,
+        r#"
+        INSERT INTO connected_services (id, user_id, service, encrypted_token)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (user_id, service) DO UPDATE SET encrypted_token = EXCLUDED.encrypted_token
+        RETURNING *
+        "#,
+        id,
+        user_id,
+        service_str,
+        encrypted_token,
+    )
+    .fetch_one(executor)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %user_id, service = service_str, "failed to upsert connected service");
+        AppError::InternalError
+    })?;
+
+    row.try_into()
 }
