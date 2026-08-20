@@ -3,8 +3,6 @@ name: CI
 on:
   push:
     branches: ["**"]
-  pull_request:
-    branches: [dev, main]
 
 jobs:
   server:
@@ -33,18 +31,23 @@ jobs:
       DATABASE_URL: postgres://vigil:password@localhost:5432/vigil_test
       SERVER_PORT: 8080
       RUST_LOG: error
+      GITHUB_CLIENT_ID: test_client_id
+      GITHUB_CLIENT_SECRET: test_client_secret
+      GITHUB_REDIRECT_URI: http://localhost:8080/github/callback
+      TOKEN_ENCRYPTION_KEY: test-encryption-key
+      IS_MERGE: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') }}
 
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
+          components: rustfmt, clippy, llvm-tools
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: server
       - uses: taiki-e/install-action@v2
         with:
-          tool: sqlx-cli
+          tool: sqlx-cli,cargo-llvm-cov
 
       - name: Migrate
         run: cargo sqlx migrate run
@@ -57,9 +60,24 @@ jobs:
       - name: Unit tests
         run: cargo test --lib
 
+      - name: Full build
+        if: env.IS_MERGE == 'true'
+        run: cargo build --release
+
       - name: Integration tests
-        if: github.event_name == 'pull_request'
+        if: env.IS_MERGE == 'true'
         run: cargo test
+
+      - name: Coverage
+        if: env.IS_MERGE == 'true'
+        run: cargo llvm-cov --html
+
+      - name: Upload coverage report
+        if: env.IS_MERGE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: server/target/llvm-cov/html
 
   client_web:
     name: Web client (Next.js)
@@ -67,6 +85,9 @@ jobs:
     defaults:
       run:
         working-directory: client_web
+
+    env:
+      IS_MERGE: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') }}
 
     steps:
       - uses: actions/checkout@v7
@@ -83,9 +104,24 @@ jobs:
           pnpm format:check
           pnpm lint
 
-      - name: Test
-        run: pnpm test
+      - name: Unit tests
+        run: pnpm test:unit
 
-      - name: Build
+      - name: Full build
+        if: env.IS_MERGE == 'true'
         run: pnpm build
-      
+
+      - name: Integration tests
+        if: env.IS_MERGE == 'true'
+        run: pnpm test:integration
+
+      - name: Coverage
+        if: env.IS_MERGE == 'true'
+        run: pnpm test:coverage
+
+      - name: Upload coverage report
+        if: env.IS_MERGE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-web-coverage
+          path: client_web/coverage/lcov-report

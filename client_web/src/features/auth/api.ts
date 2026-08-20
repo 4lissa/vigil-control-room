@@ -1,4 +1,4 @@
-import { apiClient } from "@/shared/lib/api-client";
+import { API_BASE_URL, apiClient } from "@/shared/lib/api-client";
 import {
   AuthResponse,
   LoginRequest,
@@ -12,6 +12,8 @@ export const register = (body: RegisterRequest): Promise<AuthResponse> =>
 
 export const login = (body: LoginRequest): Promise<AuthResponse> =>
   apiClient.post<AuthResponse>("/login", body);
+
+export const githubSignInUrl = `${API_BASE_URL}/github`;
 
 export const logout = (token: string): Promise<void> =>
   apiClient.post<void>("/logout", {}, token);

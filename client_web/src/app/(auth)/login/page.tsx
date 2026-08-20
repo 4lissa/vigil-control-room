@@ -1,3 +1,4 @@
+import { GithubSignInButton } from "@/features/auth/components/GithubSignInButton";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 
 export default function LoginPage() {
@@ -8,6 +9,10 @@ export default function LoginPage() {
           Sign in
         </h1>
         <LoginForm />
+        <div className="my-4 text-caption text-[var(--color-text-muted)] text-center">
+          or
+        </div>
+        <GithubSignInButton />
         <p className="mt-4 text-body text-[var(--color-text-muted)] text-center">
           Don’t have an account?{" "}
           <a

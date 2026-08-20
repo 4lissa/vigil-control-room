@@ -10,6 +10,7 @@ export const authHandlers = [
           username: "alissa",
           email: "alissa@example.com",
           language: "en",
+          has_password: true,
         },
       },
       { status: 201 },
@@ -24,6 +25,7 @@ export const authHandlers = [
         username: "alissa",
         email: "alissa@example.com",
         language: "en",
+        has_password: true,
       },
     });
   }),
@@ -34,6 +36,7 @@ export const authHandlers = [
       username: "alissa",
       email: "alissa@example.com",
       language: "en",
+      has_password: true,
     });
   }),
 
@@ -47,6 +50,7 @@ export const authHandlers = [
       username: "alissa_updated",
       email: "alissa@example.com",
       language: "en",
+      has_password: true,
     });
   }),
 ];

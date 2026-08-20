@@ -22,6 +22,12 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GithubCallbackQuery {
+    pub code: Option<String>,
+    pub state: Option<String>,
+}
+
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateProfileRequest {
     #[validate(length(min = 3, max = 50))]
@@ -45,6 +51,7 @@ pub struct UserResponse {
     pub username: String,
     pub email: String,
     pub language: String,
+    pub has_password: bool,
 }
 
 impl From<User> for UserResponse {
@@ -54,6 +61,7 @@ impl From<User> for UserResponse {
             username: user.username,
             email: user.email,
             language: user.language,
+            has_password: user.password_hash.is_some(),
         }
     }
 }
@@ -172,5 +180,23 @@ mod tests {
         assert_eq!(response.username, "alissa");
         assert_eq!(response.email, "alissa@example.com");
         assert_eq!(response.language, "fr");
+        assert!(response.has_password);
+    }
+
+    #[test]
+    fn user_response_has_password_is_false_for_github_only_account() {
+        let user = User {
+            id: Uuid::now_v7(),
+            username: "alissa".into(),
+            email: "alissa@example.com".into(),
+            password_hash: None,
+            github_id: Some("123456".into()),
+            language: "en".into(),
+            created_at: time::OffsetDateTime::now_utc(),
+            updated_at: time::OffsetDateTime::now_utc(),
+        };
+        let response: UserResponse = user.into();
+
+        assert!(!response.has_password);
     }
 }

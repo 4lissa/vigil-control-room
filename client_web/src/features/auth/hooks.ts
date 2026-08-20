@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getMe, login, logout, register, updateProfile } from "./api";
 import { getToken, setToken, clearToken } from "./token";
@@ -25,6 +27,21 @@ export const useLogin = () => {
       queryClient.setQueryData(["me"], data.user);
     },
   });
+};
+
+export const useHandleOAuthCallback = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (token) {
+      setToken(token);
+      router.replace("/incidents");
+    } else {
+      router.replace("/login");
+    }
+  }, [searchParams, router]);
 };
 
 export const useLogout = () => {

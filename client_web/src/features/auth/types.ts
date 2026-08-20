@@ -26,4 +26,5 @@ export interface UserResponse {
   username: string;
   email: string;
   language: string;
+  has_password: boolean;
 }
