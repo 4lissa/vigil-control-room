@@ -1,3 +1,4 @@
+import { GithubSignInButton } from "@/features/auth/components/GithubSignInButton";
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
 
 export default function RegisterPage() {
@@ -8,6 +9,10 @@ export default function RegisterPage() {
           Create account
         </h1>
         <RegisterForm />
+        <div className="my-4 text-caption text-[var(--color-text-muted)] text-center">
+          or
+        </div>
+        <GithubSignInButton />
         <p className="mt-4 text-body text-[var(--color-text-muted)] text-center">
           Already have an account?{" "}
           <a
