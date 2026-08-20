@@ -11,6 +11,7 @@ describe("apiClient", () => {
         username: string;
         email: string;
         language: string;
+        has_password: boolean;
       }>("/me", "token");
 
       expect(result).toEqual({
@@ -18,6 +19,7 @@ describe("apiClient", () => {
         username: "alissa",
         email: "alissa@example.com",
         language: "en",
+        has_password: true,
       });
     });
 

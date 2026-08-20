@@ -26,15 +26,20 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
     const form = e.currentTarget;
     const username = (form.elements.namedItem("username") as HTMLInputElement)
       .value;
-    const old_password = (
-      form.elements.namedItem("old_password") as HTMLInputElement
-    ).value;
-    const new_password = (
-      form.elements.namedItem("new_password") as HTMLInputElement
-    ).value;
+    const old_password =
+      (form.elements.namedItem("old_password") as HTMLInputElement | null)
+        ?.value ?? "";
+    const new_password =
+      (form.elements.namedItem("new_password") as HTMLInputElement | null)
+        ?.value ?? "";
 
     if (new_password && !old_password) {
       setPasswordError("Current password is required to set a new one");
+      return;
+    }
+
+    if (old_password && !new_password) {
+      setPasswordError("New password is required");
       return;
     }
 
@@ -60,18 +65,20 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
 
       <Input name="username" label="Username" defaultValue={user.username} />
 
-      <div className="border-t border-[var(--color-border)] pt-4 flex flex-col gap-4">
-        <p className="text-body text-[var(--color-text-muted)]">
-          Change password
-        </p>
-        <Input name="old_password" type="password" label="Current password" />
-        <Input
-          name="new_password"
-          type="password"
-          label="New password"
-          error={passwordError}
-        />
-      </div>
+      {user.has_password && (
+        <div className="border-t border-[var(--color-border)] pt-4 flex flex-col gap-4">
+          <p className="text-body text-[var(--color-text-muted)]">
+            Change password
+          </p>
+          <Input name="old_password" type="password" label="Current password" />
+          <Input
+            name="new_password"
+            type="password"
+            label="New password"
+            error={passwordError}
+          />
+        </div>
+      )}
 
       <Button
         type="submit"
