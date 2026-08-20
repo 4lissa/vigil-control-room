@@ -10,6 +10,8 @@ pub fn public_router() -> Router<AppState> {
     Router::new()
         .route("/register", post(handler::register))
         .route("/login", post(handler::login))
+        .route("/github", get(handler::github_redirect))
+        .route("/github/callback", get(handler::github_callback))
 }
 
 pub fn protected_router() -> Router<AppState> {
