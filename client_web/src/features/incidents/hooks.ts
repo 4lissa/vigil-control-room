@@ -199,7 +199,8 @@ export const useIncidentsRealtime = (teamId: string) => {
       if (
         event.type === "incident_state_changed" ||
         event.type === "incident_escalated" ||
-        event.type === "incident_assigned"
+        event.type === "incident_assigned" ||
+        event.type === "rule_triggered"
       ) {
         queryClient.invalidateQueries({
           queryKey: ["teams", teamId, "incidents"],
