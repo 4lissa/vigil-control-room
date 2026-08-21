@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::features::rule_engine::model::{Rule, ServiceCapability, ServiceCatalogEntry};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TriggerDto {
     pub service: String,
     pub event: String,
@@ -12,7 +12,7 @@ pub struct TriggerDto {
     pub filters: serde_json::Value,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ReactionDto {
     #[serde(rename = "type")]
     pub reaction_type: String,
@@ -41,27 +41,13 @@ pub struct UpdateRuleRequest {
 }
 
 #[derive(Debug, Serialize)]
-pub struct TriggerResponseDto {
-    pub service: String,
-    pub event: String,
-    pub filters: serde_json::Value,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ReactionResponseDto {
-    #[serde(rename = "type")]
-    pub reaction_type: String,
-    pub payload: serde_json::Value,
-}
-
-#[derive(Debug, Serialize)]
 pub struct RuleResponse {
     pub id: Uuid,
     pub team_id: Uuid,
     pub name: String,
     pub enabled: bool,
-    pub trigger: TriggerResponseDto,
-    pub reaction: ReactionResponseDto,
+    pub trigger: TriggerDto,
+    pub reaction: ReactionDto,
     pub created_by: Option<Uuid>,
     pub created_at: i64,
 }
@@ -73,12 +59,12 @@ impl From<Rule> for RuleResponse {
             team_id: rule.team_id,
             name: rule.name,
             enabled: rule.enabled,
-            trigger: TriggerResponseDto {
+            trigger: TriggerDto {
                 service: rule.trigger_service,
                 event: rule.trigger_event,
                 filters: rule.trigger_filters,
             },
-            reaction: ReactionResponseDto {
+            reaction: ReactionDto {
                 reaction_type: rule.reaction_type.as_str().to_string(),
                 payload: rule.reaction_payload,
             },

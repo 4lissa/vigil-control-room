@@ -134,7 +134,11 @@ mod tests {
 
     #[test]
     fn verify_signature_rejects_missing_prefix() {
-        assert!(!verify_signature(b"my-secret", b"hello world", "invalid-signature"));
+        assert!(!verify_signature(
+            b"my-secret",
+            b"hello world",
+            "invalid-signature"
+        ));
     }
 
     #[test]
