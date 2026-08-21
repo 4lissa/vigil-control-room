@@ -88,6 +88,17 @@ export type WsEvent =
       member: string;
       until: number | null;
       by: string;
+    }
+  | {
+      type: "rule_triggered";
+      rule_name: string;
+      result: string;
+      incident_id: string | null;
+    }
+  | {
+      type: "rule_failed";
+      rule_name: string;
+      error: string;
     };
 
 export type ClientMessage =
