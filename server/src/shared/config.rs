@@ -10,6 +10,7 @@ pub struct Config {
     pub github_client_secret: String,
     pub github_redirect_uri: String,
     pub token_encryption_key: [u8; 32],
+    pub kickoff_token_hash: String,
 }
 
 impl Config {
@@ -33,12 +34,20 @@ impl Config {
                 "http://localhost:8080/github/callback",
             ),
             token_encryption_key: derive_key(&required_env("TOKEN_ENCRYPTION_KEY")),
+            kickoff_token_hash: hash_hex(&required_env("KICKOFF_TOKEN")),
         }
     }
 }
 
 fn derive_key(secret: &str) -> [u8; 32] {
     Sha256::digest(secret.as_bytes()).into()
+}
+
+fn hash_hex(value: &str) -> String {
+    Sha256::digest(value.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 fn required_env(key: &str) -> String {

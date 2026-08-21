@@ -35,6 +35,7 @@ jobs:
       GITHUB_CLIENT_SECRET: test_client_secret
       GITHUB_REDIRECT_URI: http://localhost:8080/github/callback
       TOKEN_ENCRYPTION_KEY: test-encryption-key
+      KICKOFF_TOKEN: test-kickoff-token
       IS_MERGE: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') }}
 
     steps:

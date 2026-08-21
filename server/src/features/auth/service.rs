@@ -277,6 +277,7 @@ mod tests {
             github_client_secret: "secret123".into(),
             github_redirect_uri: "http://localhost:8080/github/callback".into(),
             token_encryption_key: [0u8; 32],
+            kickoff_token_hash: String::new(),
         }
     }
 
