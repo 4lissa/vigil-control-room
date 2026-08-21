@@ -6,6 +6,7 @@ import { useTeam, useTeamMembers, setLastTeamId } from "@/features/teams";
 import { TeamMemberList } from "@/features/teams/components/TeamMemberList";
 import { ManagerActions } from "@/features/teams/components/ManagerActions";
 import { BannedMembersList } from "@/features/teams/components/BannedMembersList";
+import { RulesLink } from "@/features/rule_engine/components/RulesLink";
 
 export default function TeamPage({
   params,
@@ -67,6 +68,7 @@ export default function TeamPage({
             members={members}
             currentUserId={user?.id ?? ""}
           />
+          <RulesLink teamId={teamId} />
         </>
       )}
     </div>
