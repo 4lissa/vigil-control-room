@@ -96,6 +96,7 @@ pub async fn github_webhook(
 
     let (rule, execution) = service::handle_github_webhook(
         &state.db,
+        &state.http_client,
         &state.config,
         rule_id,
         event_type,
