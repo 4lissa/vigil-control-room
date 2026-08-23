@@ -39,6 +39,17 @@ pub struct UpdateProfileRequest {
     pub old_password: Option<String>,
 }
 
+#[derive(Debug, Deserialize, Validate)]
+pub struct ConnectServiceRequest {
+    #[validate(length(min = 1, max = 500))]
+    pub token: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ConnectedServiceStatusResponse {
+    pub connected: bool,
+}
+
 #[derive(Debug, Serialize)]
 pub struct AuthResponse {
     pub token: String,
@@ -158,6 +169,12 @@ mod tests {
             new_password: Some("short".into()),
             old_password: None,
         };
+        assert!(req.validate().is_err());
+    }
+
+    #[test]
+    fn connect_service_request_rejects_empty_token() {
+        let req = ConnectServiceRequest { token: "".into() };
         assert!(req.validate().is_err());
     }
 
