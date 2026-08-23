@@ -53,4 +53,16 @@ export const authHandlers = [
       has_password: true,
     });
   }),
+
+  http.get("http://localhost:8080/connected-services/:service", () => {
+    return HttpResponse.json({ connected: false });
+  }),
+
+  http.post("http://localhost:8080/connected-services/:service", () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.delete("http://localhost:8080/connected-services/:service", () => {
+    return new HttpResponse(null, { status: 204 });
+  }),
 ];

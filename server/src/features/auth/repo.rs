@@ -299,7 +299,7 @@ impl TryFrom<ConnectedServiceRow> for ConnectedService {
     type Error = AppError;
 
     fn try_from(row: ConnectedServiceRow) -> Result<Self, AppError> {
-        let service = service_kind_from_str(&row.service).ok_or_else(|| {
+        let service = ServiceKind::parse(&row.service).ok_or_else(|| {
             tracing::error!(service = %row.service, "unknown connected_service value from database");
             AppError::InternalError
         })?;
@@ -314,11 +314,27 @@ impl TryFrom<ConnectedServiceRow> for ConnectedService {
     }
 }
 
-fn service_kind_from_str(s: &str) -> Option<ServiceKind> {
-    match s {
-        "github" => Some(ServiceKind::Github),
-        _ => None,
-    }
+pub async fn find_connected_service(
+    pool: &PgPool,
+    user_id: Uuid,
+    service: ServiceKind,
+) -> Result<Option<ConnectedService>, AppError> {
+    let service_str = service.as_str();
+
+    let row = sqlx::query_as!(
+        ConnectedServiceRow,
+        r#"SELECT * FROM connected_services WHERE user_id = $1 AND service = $2"#,
+        user_id,
+        service_str,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %user_id, service = service_str, "failed to find connected service");
+        AppError::InternalError
+    })?;
+
+    row.map(TryInto::try_into).transpose()
 }
 
 pub async fn upsert_connected_service(
@@ -351,4 +367,26 @@ pub async fn upsert_connected_service(
     })?;
 
     row.try_into()
+}
+
+pub async fn delete_connected_service(
+    pool: &PgPool,
+    user_id: Uuid,
+    service: ServiceKind,
+) -> Result<(), AppError> {
+    let service_str = service.as_str();
+
+    sqlx::query!(
+        r#"DELETE FROM connected_services WHERE user_id = $1 AND service = $2"#,
+        user_id,
+        service_str,
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!(error = ?e, %user_id, service = service_str, "failed to delete connected service");
+        AppError::InternalError
+    })?;
+
+    Ok(())
 }

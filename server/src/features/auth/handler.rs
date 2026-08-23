@@ -1,6 +1,6 @@
 use axum::{
     Json,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Redirect,
 };
@@ -11,8 +11,8 @@ use validator::Validate;
 use crate::AppState;
 use crate::features::auth::{
     dto::{
-        AuthResponse, GithubCallbackQuery, LoginRequest, RegisterRequest, UpdateProfileRequest,
-        UserResponse,
+        AuthResponse, ConnectServiceRequest, ConnectedServiceStatusResponse, GithubCallbackQuery,
+        LoginRequest, RegisterRequest, UpdateProfileRequest, UserResponse,
     },
     model::Session,
     service,
@@ -154,4 +154,46 @@ pub async fn update_me(
     .await?;
 
     Ok((StatusCode::OK, Json(user.into())))
+}
+
+pub async fn connect_service(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    Path(service_name): Path<String>,
+    Json(req): Json<ConnectServiceRequest>,
+) -> Result<StatusCode, AppError> {
+    req.validate()
+        .map_err(|e| AppError::ValidationError(validation_message(&e)))?;
+
+    service::connect_service(
+        &state.db,
+        &state.config,
+        auth_user.user_id,
+        &service_name,
+        &req.token,
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn get_connected_service_status(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    Path(service_name): Path<String>,
+) -> Result<Json<ConnectedServiceStatusResponse>, AppError> {
+    let connected =
+        service::is_service_connected(&state.db, auth_user.user_id, &service_name).await?;
+
+    Ok(Json(ConnectedServiceStatusResponse { connected }))
+}
+
+pub async fn disconnect_service(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    Path(service_name): Path<String>,
+) -> Result<StatusCode, AppError> {
+    service::disconnect_service(&state.db, auth_user.user_id, &service_name).await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

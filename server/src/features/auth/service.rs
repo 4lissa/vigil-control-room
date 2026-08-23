@@ -225,6 +225,62 @@ pub async fn update_profile(
     Ok(user)
 }
 
+pub async fn connect_service(
+    pool: &PgPool,
+    config: &Config,
+    user_id: Uuid,
+    service: &str,
+    token: &str,
+) -> Result<(), AppError> {
+    if service == ServiceKind::Github.as_str() {
+        return Err(AppError::ValidationError(
+            "GitHub is connected via OAuth2, not a personal token".into(),
+        ));
+    }
+
+    let service = ServiceKind::parse(service)
+        .ok_or_else(|| AppError::ValidationError(format!("Unsupported service: {service}")))?;
+
+    let encrypted_token = crypto::encrypt(&config.token_encryption_key, token);
+
+    repo::upsert_connected_service(pool, Uuid::now_v7(), user_id, service, &encrypted_token)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn is_service_connected(
+    pool: &PgPool,
+    user_id: Uuid,
+    service: &str,
+) -> Result<bool, AppError> {
+    let service = ServiceKind::parse(service)
+        .ok_or_else(|| AppError::ValidationError(format!("Unsupported service: {service}")))?;
+
+    let connected = repo::find_connected_service(pool, user_id, service)
+        .await?
+        .is_some();
+
+    Ok(connected)
+}
+
+pub async fn disconnect_service(
+    pool: &PgPool,
+    user_id: Uuid,
+    service: &str,
+) -> Result<(), AppError> {
+    if service == ServiceKind::Github.as_str() {
+        return Err(AppError::ValidationError(
+            "GitHub is connected via OAuth2, not a personal token".into(),
+        ));
+    }
+
+    let service = ServiceKind::parse(service)
+        .ok_or_else(|| AppError::ValidationError(format!("Unsupported service: {service}")))?;
+
+    repo::delete_connected_service(pool, user_id, service).await
+}
+
 async fn hash_password(password: &str) -> Result<String, AppError> {
     let password = password.to_owned();
     tokio::task::spawn_blocking(move || {
@@ -277,6 +333,7 @@ mod tests {
             github_client_secret: "secret123".into(),
             github_redirect_uri: "http://localhost:8080/github/callback".into(),
             token_encryption_key: [0u8; 32],
+            kickoff_token_hash: String::new(),
         }
     }
 

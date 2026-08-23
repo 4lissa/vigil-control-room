@@ -19,4 +19,10 @@ pub fn protected_router() -> Router<AppState> {
         .route("/logout", post(handler::logout))
         .route("/me", get(handler::me))
         .route("/me", patch(handler::update_me))
+        .route(
+            "/connected-services/{service}",
+            get(handler::get_connected_service_status)
+                .post(handler::connect_service)
+                .delete(handler::disconnect_service),
+        )
 }

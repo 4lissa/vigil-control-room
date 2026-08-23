@@ -145,6 +145,16 @@ impl Severity {
             Severity::Critical => "critical",
         }
     }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "low" => Some(Severity::Low),
+            "medium" => Some(Severity::Medium),
+            "high" => Some(Severity::High),
+            "critical" => Some(Severity::Critical),
+            _ => None,
+        }
+    }
 }
 
 impl Incident {
@@ -354,5 +364,22 @@ mod tests {
     fn summarize_reactions_returns_empty_for_no_reactions() {
         let summaries = summarize_reactions(&[], Uuid::now_v7());
         assert!(summaries.is_empty());
+    }
+
+    #[test]
+    fn severity_parse_round_trips_through_as_str() {
+        for severity in [
+            Severity::Low,
+            Severity::Medium,
+            Severity::High,
+            Severity::Critical,
+        ] {
+            assert_eq!(Severity::parse(severity.as_str()), Some(severity));
+        }
+    }
+
+    #[test]
+    fn severity_parse_rejects_unknown_value() {
+        assert_eq!(Severity::parse("not-a-severity"), None);
     }
 }

@@ -2,6 +2,7 @@
 
 import { useMe } from "@/features/auth";
 import { ProfileForm } from "@/features/auth/components/ProfileForm";
+import { ConnectHttpTokenForm } from "@/features/auth/components/ConnectHttpTokenForm";
 
 export default function ProfilePage() {
   const { data: user, isLoading } = useMe();
@@ -33,6 +34,13 @@ export default function ProfilePage() {
         <p className="text-body text-[var(--color-text-muted)] mt-1">
           {user.email}
         </p>
+      </div>
+
+      <div className="border-t border-[var(--color-border)] pt-4 flex flex-col gap-4">
+        <p className="text-body text-[var(--color-text-secondary)]">
+          Connected services
+        </p>
+        <ConnectHttpTokenForm />
       </div>
     </div>
   );

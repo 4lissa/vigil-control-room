@@ -74,6 +74,16 @@ pub async fn post_json_with_token(
     app.oneshot(request).await.unwrap()
 }
 
+pub async fn get(app: Router, uri: &str) -> axum::response::Response {
+    let request = Request::builder()
+        .method("GET")
+        .uri(uri)
+        .body(Body::empty())
+        .unwrap();
+
+    app.oneshot(request).await.unwrap()
+}
+
 pub async fn get_with_token(app: Router, uri: &str, token: &str) -> axum::response::Response {
     let request = Request::builder()
         .method("GET")
@@ -104,6 +114,21 @@ pub async fn delete_with_token(app: Router, uri: &str, token: &str) -> axum::res
         .body(Body::empty())
         .unwrap();
 
+    app.oneshot(request).await.unwrap()
+}
+
+pub async fn post_bytes_with_headers(
+    app: Router,
+    uri: &str,
+    headers: &[(&str, &str)],
+    body: Vec<u8>,
+) -> axum::response::Response {
+    let mut builder = Request::builder().method("POST").uri(uri);
+    for (key, value) in headers {
+        builder = builder.header(*key, *value);
+    }
+
+    let request = builder.body(Body::from(body)).unwrap();
     app.oneshot(request).await.unwrap()
 }
 

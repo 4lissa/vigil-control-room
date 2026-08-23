@@ -1,5 +1,8 @@
 export { getToken, setToken, clearToken } from "./token";
 export {
+  useConnectService,
+  useConnectedServiceStatus,
+  useDisconnectService,
   useHandleOAuthCallback,
   useLogin,
   useLogout,
@@ -9,6 +12,8 @@ export {
 } from "./hooks";
 export type {
   AuthResponse,
+  ConnectServiceRequest,
+  ConnectedServiceStatusResponse,
   LoginRequest,
   RegisterRequest,
   UpdateProfileRequest,

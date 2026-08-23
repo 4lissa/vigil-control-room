@@ -5,6 +5,9 @@ import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/node";
 import { getToken, setToken } from "./token";
 import {
+  useConnectService,
+  useConnectedServiceStatus,
+  useDisconnectService,
   useLogin,
   useLogout,
   useMe,
@@ -183,5 +186,83 @@ describe("useUpdateProfile", () => {
     expect(queryClient.getQueryData(["me"])).toMatchObject({
       username: "alissa_updated",
     });
+  });
+});
+
+describe("useConnectService", () => {
+  it("succeeds for a supported service", async () => {
+    setToken("my-session-token");
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useConnectService(), { wrapper });
+
+    result.current.mutate({ service: "http", body: { token: "my-token" } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it("fails for an unsupported service", async () => {
+    server.use(
+      http.post("http://localhost:8080/connected-services/:service", () => {
+        return HttpResponse.json(
+          {
+            error: {
+              code: "VALIDATION_ERROR",
+              message: "Unsupported service: discord",
+            },
+          },
+          { status: 422 },
+        );
+      }),
+    );
+
+    setToken("my-session-token");
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useConnectService(), { wrapper });
+
+    result.current.mutate({ service: "discord", body: { token: "my-token" } });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe("Unsupported service: discord");
+  });
+});
+
+describe("useConnectedServiceStatus", () => {
+  it("reports connected once a service was connected", async () => {
+    server.use(
+      http.get("http://localhost:8080/connected-services/:service", () => {
+        return HttpResponse.json({ connected: true });
+      }),
+    );
+
+    setToken("my-session-token");
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useConnectedServiceStatus("http"), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toMatchObject({ connected: true });
+  });
+});
+
+describe("useDisconnectService", () => {
+  it("invalidates the connected-services cache on success", async () => {
+    setToken("my-session-token");
+    const { wrapper, queryClient } = createWrapper();
+    queryClient.setQueryData(["connected-services", "http"], {
+      connected: true,
+    });
+
+    const { result } = renderHook(() => useDisconnectService(), { wrapper });
+
+    result.current.mutate("http");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(
+      queryClient.getQueryState(["connected-services", "http"])?.isInvalidated,
+    ).toBe(true);
   });
 });

@@ -80,6 +80,15 @@ pub enum WsEvent {
         until: Option<i64>,
         by: String,
     },
+    RuleTriggered {
+        rule_name: String,
+        result: String,
+        incident_id: Option<Uuid>,
+    },
+    RuleFailed {
+        rule_name: String,
+        error: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -164,6 +173,31 @@ mod tests {
         let json = serde_json::to_string(&event).unwrap();
         assert!(json.contains(r#""type":"reaction_added""#));
         assert!(json.contains(r#""emoji":"+1""#));
+    }
+
+    #[test]
+    fn rule_triggered_serializes_correctly() {
+        let event = WsEvent::RuleTriggered {
+            rule_name: "CI failure -> Incident".into(),
+            result: "incident_created".into(),
+            incident_id: Some(Uuid::nil()),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert!(json.contains(r#""type":"rule_triggered""#));
+        assert!(json.contains(r#""result":"incident_created""#));
+    }
+
+    #[test]
+    fn rule_failed_serializes_correctly() {
+        let event = WsEvent::RuleFailed {
+            rule_name: "CI failure -> Incident".into(),
+            error: "service_unavailable".into(),
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"rule_failed","rule_name":"CI failure -> Incident","error":"service_unavailable"}"#
+        );
     }
 
     #[test]
