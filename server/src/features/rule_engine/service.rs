@@ -1,6 +1,8 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::features::auth::model::ServiceKind;
+use crate::features::auth::repo as auth_repo;
 use crate::features::incidents::model::Severity;
 use crate::features::incidents::service as incidents_service;
 use crate::features::rule_engine::model::{ReactionType, Rule, render_template};
@@ -104,8 +106,10 @@ pub async fn delete_rule(
     repo::delete_rule(pool, rule_id).await
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn handle_github_webhook(
     pool: &PgPool,
+    http_client: &reqwest::Client,
     config: &Config,
     rule_id: Uuid,
     event_type: &str,
@@ -136,12 +140,14 @@ pub async fn handle_github_webhook(
         return Ok((rule, None));
     }
 
-    let execution = execute_reaction(pool, &rule, &context).await;
+    let execution = execute_reaction(pool, http_client, config, &rule, &context).await;
     Ok((rule, Some(execution)))
 }
 
 async fn execute_reaction(
     pool: &PgPool,
+    http_client: &reqwest::Client,
+    config: &Config,
     rule: &Rule,
     context: &serde_json::Value,
 ) -> RuleExecution {
@@ -154,6 +160,9 @@ async fn execute_reaction(
     match rule.reaction_type {
         ReactionType::VigilCreateIncident => {
             execute_vigil_create_incident(pool, rule, created_by, context).await
+        }
+        ReactionType::HttpPost => {
+            execute_http_post(pool, http_client, config, rule, created_by, context).await
         }
     }
 }
@@ -207,6 +216,58 @@ async fn execute_vigil_create_incident(
         },
         Err(e) => RuleExecution::Failed {
             error: format!("Failed to create incident: {e:?}"),
+        },
+    }
+}
+
+async fn execute_http_post(
+    pool: &PgPool,
+    http_client: &reqwest::Client,
+    config: &Config,
+    rule: &Rule,
+    created_by: Uuid,
+    context: &serde_json::Value,
+) -> RuleExecution {
+    let Some(url) = rule.reaction_payload.get("url").and_then(|v| v.as_str()) else {
+        return RuleExecution::Failed {
+            error: "Missing 'url' in rule reaction payload".into(),
+        };
+    };
+
+    let body = rule
+        .reaction_payload
+        .get("body")
+        .and_then(|v| v.as_str())
+        .map(|template| render_template(template, context))
+        .unwrap_or_default();
+
+    let token = match auth_repo::find_connected_service(pool, created_by, ServiceKind::Http).await {
+        Ok(Some(connected)) => {
+            crypto::decrypt(&config.token_encryption_key, &connected.encrypted_token)
+        }
+        Ok(None) => None,
+        Err(e) => {
+            return RuleExecution::Failed {
+                error: format!("Failed to look up connected HTTP token: {e:?}"),
+            };
+        }
+    };
+
+    let mut request = http_client.post(url).body(body);
+    if let Some(token) = token {
+        request = request.bearer_auth(token);
+    }
+
+    match request.send().await {
+        Ok(response) if response.status().is_success() => RuleExecution::Triggered {
+            result: "http_post_sent".into(),
+            incident_id: None,
+        },
+        Ok(response) => RuleExecution::Failed {
+            error: format!("HTTP request failed with status {}", response.status()),
+        },
+        Err(e) => RuleExecution::Failed {
+            error: format!("Failed to send HTTP request: {e}"),
         },
     }
 }
