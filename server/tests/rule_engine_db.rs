@@ -49,6 +49,10 @@ async fn create_test_rule(
     .expect("failed to create test rule")
 }
 
+fn http_client() -> reqwest::Client {
+    reqwest::Client::new()
+}
+
 fn workflow_run_payload(conclusion: &str, full_name: &str) -> Vec<u8> {
     serde_json::to_vec(&json!({
         "action": "completed",
@@ -154,6 +158,31 @@ async fn create_rule_fails_for_unsupported_reaction_type(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "./migrations")]
+async fn create_rule_succeeds_for_http_reaction_without_a_connected_token(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+    let config = Config::from_env();
+
+    let result = service::create_rule(
+        &pool,
+        &config,
+        team.id,
+        user.id,
+        "CI failure > HTTP",
+        true,
+        "github",
+        "workflow_run",
+        json!({}),
+        "shhh",
+        "http_post",
+        json!({ "url": "https://example.com" }),
+    )
+    .await;
+
+    assert!(result.is_ok());
+}
+
+#[sqlx::test(migrations = "./migrations")]
 async fn get_rules_returns_created_rules(pool: PgPool) {
     let (user, _) = common::create_test_user(&pool).await;
     let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
@@ -216,10 +245,17 @@ async fn handle_github_webhook_matches_and_creates_incident(pool: PgPool) {
     let body = workflow_run_payload("failure", "my-org/my-repo");
     let signature = sign("shhh", &body);
 
-    let (_, execution) =
-        service::handle_github_webhook(&pool, &config, rule.id, "workflow_run", &signature, &body)
-            .await
-            .unwrap();
+    let (_, execution) = service::handle_github_webhook(
+        &pool,
+        &http_client(),
+        &config,
+        rule.id,
+        "workflow_run",
+        &signature,
+        &body,
+    )
+    .await
+    .unwrap();
 
     match execution {
         Some(RuleExecution::Triggered {
@@ -252,10 +288,17 @@ async fn handle_github_webhook_returns_none_when_filters_dont_match(pool: PgPool
     let body = workflow_run_payload("success", "my-org/my-repo");
     let signature = sign("shhh", &body);
 
-    let (_, execution) =
-        service::handle_github_webhook(&pool, &config, rule.id, "workflow_run", &signature, &body)
-            .await
-            .unwrap();
+    let (_, execution) = service::handle_github_webhook(
+        &pool,
+        &http_client(),
+        &config,
+        rule.id,
+        "workflow_run",
+        &signature,
+        &body,
+    )
+    .await
+    .unwrap();
 
     assert!(execution.is_none());
 }
@@ -272,10 +315,17 @@ async fn handle_github_webhook_ignores_events_the_rule_does_not_listen_for(pool:
         serde_json::to_vec(&json!({ "zen": "Keep it logically awesome.", "hook_id": 1 })).unwrap();
     let signature = sign("shhh", &body);
 
-    let (_, execution) =
-        service::handle_github_webhook(&pool, &config, rule.id, "ping", &signature, &body)
-            .await
-            .unwrap();
+    let (_, execution) = service::handle_github_webhook(
+        &pool,
+        &http_client(),
+        &config,
+        rule.id,
+        "ping",
+        &signature,
+        &body,
+    )
+    .await
+    .unwrap();
 
     assert!(execution.is_none());
 }
@@ -291,9 +341,16 @@ async fn handle_github_webhook_fails_with_a_bad_signature(pool: PgPool) {
     let body = workflow_run_payload("failure", "my-org/my-repo");
     let signature = sign("wrong-secret", &body);
 
-    let result =
-        service::handle_github_webhook(&pool, &config, rule.id, "workflow_run", &signature, &body)
-            .await;
+    let result = service::handle_github_webhook(
+        &pool,
+        &http_client(),
+        &config,
+        rule.id,
+        "workflow_run",
+        &signature,
+        &body,
+    )
+    .await;
 
     assert!(matches!(result, Err(AppError::Unauthorized)));
 }
@@ -324,10 +381,58 @@ async fn handle_github_webhook_reports_a_failed_execution_for_an_invalid_severit
     let body = workflow_run_payload("failure", "my-org/my-repo");
     let signature = sign("shhh", &body);
 
-    let (_, execution) =
-        service::handle_github_webhook(&pool, &config, rule.id, "workflow_run", &signature, &body)
-            .await
-            .unwrap();
+    let (_, execution) = service::handle_github_webhook(
+        &pool,
+        &http_client(),
+        &config,
+        rule.id,
+        "workflow_run",
+        &signature,
+        &body,
+    )
+    .await
+    .unwrap();
+
+    assert!(matches!(execution, Some(RuleExecution::Failed { .. })));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn handle_github_webhook_http_reaction_fails_when_url_is_missing(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let (team, _) = common::create_test_team(&pool, "Ops", user.id).await;
+    let config = Config::from_env();
+
+    let rule = service::create_rule(
+        &pool,
+        &config,
+        team.id,
+        user.id,
+        "CI failure > HTTP",
+        true,
+        "github",
+        "workflow_run",
+        json!({}),
+        "shhh",
+        "http_post",
+        json!({}),
+    )
+    .await
+    .unwrap();
+
+    let body = workflow_run_payload("failure", "my-org/my-repo");
+    let signature = sign("shhh", &body);
+
+    let (_, execution) = service::handle_github_webhook(
+        &pool,
+        &http_client(),
+        &config,
+        rule.id,
+        "workflow_run",
+        &signature,
+        &body,
+    )
+    .await
+    .unwrap();
 
     assert!(matches!(execution, Some(RuleExecution::Failed { .. })));
 }

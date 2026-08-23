@@ -1,7 +1,10 @@
 mod common;
 
 use sqlx::PgPool;
+use vigil_server::features::auth::model::ServiceKind;
+use vigil_server::features::auth::repo;
 use vigil_server::features::auth::service;
+use vigil_server::shared::config::Config;
 use vigil_server::shared::error::AppError;
 
 #[sqlx::test(migrations = "./migrations")]
@@ -152,4 +155,121 @@ async fn update_profile_fails_when_username_already_taken(pool: PgPool) {
 
     let result = service::update_profile(&pool, user.id, Some("bob"), None, None, None).await;
     assert!(matches!(result, Err(AppError::Conflict(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_service_stores_an_encrypted_token(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let config = Config::from_env();
+
+    service::connect_service(&pool, &config, user.id, "http", "my-token")
+        .await
+        .unwrap();
+
+    let connected = repo::find_connected_service(&pool, user.id, ServiceKind::Http)
+        .await
+        .unwrap()
+        .unwrap();
+
+    assert_ne!(connected.encrypted_token, b"my-token");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_service_rejects_github(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let config = Config::from_env();
+
+    let result = service::connect_service(&pool, &config, user.id, "github", "my-token").await;
+
+    assert!(matches!(result, Err(AppError::ValidationError(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_service_rejects_unknown_service(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let config = Config::from_env();
+
+    let result = service::connect_service(&pool, &config, user.id, "discord", "my-token").await;
+
+    assert!(matches!(result, Err(AppError::ValidationError(_))));
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_service_replaces_an_existing_token(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let config = Config::from_env();
+
+    service::connect_service(&pool, &config, user.id, "http", "old-token")
+        .await
+        .unwrap();
+    service::connect_service(&pool, &config, user.id, "http", "new-token")
+        .await
+        .unwrap();
+
+    let connected = repo::find_connected_service(&pool, user.id, ServiceKind::Http)
+        .await
+        .unwrap()
+        .unwrap();
+    let decrypted = vigil_server::shared::crypto::decrypt(
+        &config.token_encryption_key,
+        &connected.encrypted_token,
+    )
+    .unwrap();
+
+    assert_eq!(decrypted, "new-token");
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn is_service_connected_returns_false_when_nothing_connected(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+
+    let connected = service::is_service_connected(&pool, user.id, "http")
+        .await
+        .unwrap();
+
+    assert!(!connected);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn is_service_connected_returns_true_after_connecting(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let config = Config::from_env();
+
+    service::connect_service(&pool, &config, user.id, "http", "my-token")
+        .await
+        .unwrap();
+
+    let connected = service::is_service_connected(&pool, user.id, "http")
+        .await
+        .unwrap();
+
+    assert!(connected);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn disconnect_service_removes_the_connection(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+    let config = Config::from_env();
+
+    service::connect_service(&pool, &config, user.id, "http", "my-token")
+        .await
+        .unwrap();
+    service::disconnect_service(&pool, user.id, "http")
+        .await
+        .unwrap();
+
+    let connected = repo::find_connected_service(&pool, user.id, ServiceKind::Http)
+        .await
+        .unwrap();
+
+    assert!(connected.is_none());
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn disconnect_service_rejects_github(pool: PgPool) {
+    let (user, _) = common::create_test_user(&pool).await;
+
+    let result = service::disconnect_service(&pool, user.id, "github").await;
+
+    assert!(matches!(result, Err(AppError::ValidationError(_))));
 }
