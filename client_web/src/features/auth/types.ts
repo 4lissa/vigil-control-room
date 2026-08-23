@@ -16,6 +16,14 @@ export interface UpdateProfileRequest {
   old_password?: string;
 }
 
+export interface ConnectServiceRequest {
+  token: string;
+}
+
+export interface ConnectedServiceStatusResponse {
+  connected: boolean;
+}
+
 export interface AuthResponse {
   token: string;
   user: UserResponse;

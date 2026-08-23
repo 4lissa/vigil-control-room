@@ -1,6 +1,8 @@
 import { API_BASE_URL, apiClient } from "@/shared/lib/api-client";
 import {
   AuthResponse,
+  ConnectServiceRequest,
+  ConnectedServiceStatusResponse,
   LoginRequest,
   RegisterRequest,
   UpdateProfileRequest,
@@ -25,3 +27,25 @@ export const updateProfile = (
   body: UpdateProfileRequest,
   token: string,
 ): Promise<UserResponse> => apiClient.patch<UserResponse>("/me", body, token);
+
+export const connectService = (
+  service: string,
+  body: ConnectServiceRequest,
+  token: string,
+): Promise<void> =>
+  apiClient.post<void>(`/connected-services/${service}`, body, token);
+
+export const getConnectedServiceStatus = (
+  service: string,
+  token: string,
+): Promise<ConnectedServiceStatusResponse> =>
+  apiClient.get<ConnectedServiceStatusResponse>(
+    `/connected-services/${service}`,
+    token,
+  );
+
+export const disconnectService = (
+  service: string,
+  token: string,
+): Promise<void> =>
+  apiClient.delete<void>(`/connected-services/${service}`, token);
