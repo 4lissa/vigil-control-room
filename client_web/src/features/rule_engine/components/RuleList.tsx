@@ -56,6 +56,12 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
                   {API_BASE_URL}/webhooks/github/{rule.id}
                 </code>
               )}
+              {rule.reaction.type === "http_post" &&
+                rule.reaction.payload.url && (
+                  <code className="text-caption text-[var(--color-text-muted)] break-all select-all">
+                    {rule.reaction.payload.url}
+                  </code>
+                )}
             </div>
             <div className="flex items-center gap-3 shrink-0">
               <button
