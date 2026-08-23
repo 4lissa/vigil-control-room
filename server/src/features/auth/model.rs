@@ -32,6 +32,7 @@ pub struct SessionWithUsername {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ServiceKind {
     Github,
+    Http,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +60,15 @@ impl ServiceKind {
     pub fn as_str(&self) -> &'static str {
         match self {
             ServiceKind::Github => "github",
+            ServiceKind::Http => "http",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "github" => Some(ServiceKind::Github),
+            "http" => Some(ServiceKind::Http),
+            _ => None,
         }
     }
 }
@@ -86,5 +96,17 @@ mod tests {
     fn is_expired_returns_true_for_past_date() {
         let session = session_expiring_at(OffsetDateTime::now_utc() - time::Duration::days(1));
         assert!(session.is_expired());
+    }
+
+    #[test]
+    fn service_kind_parse_round_trips_through_as_str() {
+        for service in [ServiceKind::Github, ServiceKind::Http] {
+            assert_eq!(ServiceKind::parse(service.as_str()), Some(service));
+        }
+    }
+
+    #[test]
+    fn service_kind_parse_rejects_unknown_value() {
+        assert_eq!(ServiceKind::parse("discord"), None);
     }
 }

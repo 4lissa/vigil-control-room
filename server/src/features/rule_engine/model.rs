@@ -4,18 +4,21 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ReactionType {
     VigilCreateIncident,
+    HttpPost,
 }
 
 impl ReactionType {
     pub fn as_str(&self) -> &'static str {
         match self {
             ReactionType::VigilCreateIncident => "vigil_create_incident",
+            ReactionType::HttpPost => "http_post",
         }
     }
 
     pub fn parse(s: &str) -> Option<Self> {
         match s {
             "vigil_create_incident" => Some(ReactionType::VigilCreateIncident),
+            "http_post" => Some(ReactionType::HttpPost),
             _ => None,
         }
     }
@@ -124,6 +127,14 @@ pub fn service_catalog() -> &'static [ServiceCatalogEntry] {
                 description: "Create a VIGIL incident with configurable severity and title",
             }],
         },
+        ServiceCatalogEntry {
+            name: "http",
+            actions: &[],
+            reactions: &[ServiceCapability {
+                name: "send_post",
+                description: "Send a POST request to an external URL",
+            }],
+        },
     ]
 }
 
@@ -151,11 +162,12 @@ mod tests {
 
     #[test]
     fn reaction_type_round_trips_through_str() {
-        let s = ReactionType::VigilCreateIncident.as_str();
-        assert_eq!(
-            ReactionType::parse(s),
-            Some(ReactionType::VigilCreateIncident)
-        );
+        for reaction_type in [ReactionType::VigilCreateIncident, ReactionType::HttpPost] {
+            assert_eq!(
+                ReactionType::parse(reaction_type.as_str()),
+                Some(reaction_type)
+            );
+        }
     }
 
     #[test]
@@ -248,5 +260,9 @@ mod tests {
         let vigil = catalog.iter().find(|s| s.name == "vigil").unwrap();
         assert!(vigil.actions.is_empty());
         assert!(!vigil.reactions.is_empty());
+
+        let http = catalog.iter().find(|s| s.name == "http").unwrap();
+        assert!(http.actions.is_empty());
+        assert!(!http.reactions.is_empty());
     }
 }
