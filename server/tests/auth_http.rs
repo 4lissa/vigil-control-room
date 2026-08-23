@@ -265,3 +265,114 @@ async fn logout_returns_204_and_invalidates_token(pool: PgPool) {
     let response = common::get_with_token(app, "/me", &token).await;
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_service_returns_204_for_http(pool: PgPool) {
+    let (_, session) = common::create_test_user(&pool).await;
+
+    let app = common::build_test_app(pool);
+    let response = common::post_json_with_token(
+        app,
+        "/connected-services/http",
+        &session.id.to_string(),
+        json!({ "token": "my-token" }),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_service_returns_422_for_github(pool: PgPool) {
+    let (_, session) = common::create_test_user(&pool).await;
+
+    let app = common::build_test_app(pool);
+    let response = common::post_json_with_token(
+        app,
+        "/connected-services/github",
+        &session.id.to_string(),
+        json!({ "token": "my-token" }),
+    )
+    .await;
+
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn connect_service_returns_401_without_token(pool: PgPool) {
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    let app = common::build_test_app(pool);
+    let request = Request::builder()
+        .method("POST")
+        .uri("/connected-services/http")
+        .header("Content-Type", "application/json")
+        .body(Body::from(r#"{"token":"my-token"}"#))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn get_connected_service_status_returns_false_initially(pool: PgPool) {
+    let (_, session) = common::create_test_user(&pool).await;
+
+    let app = common::build_test_app(pool);
+    let response =
+        common::get_with_token(app, "/connected-services/http", &session.id.to_string()).await;
+
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(body["connected"], false);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn get_connected_service_status_returns_true_after_connecting(pool: PgPool) {
+    let (_, session) = common::create_test_user(&pool).await;
+    let token = session.id.to_string();
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        "/connected-services/http",
+        &token,
+        json!({ "token": "my-token" }),
+    )
+    .await;
+
+    let app = common::build_test_app(pool);
+    let response = common::get_with_token(app, "/connected-services/http", &token).await;
+
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(body["connected"], true);
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn disconnect_service_returns_204_and_clears_the_status(pool: PgPool) {
+    let (_, session) = common::create_test_user(&pool).await;
+    let token = session.id.to_string();
+
+    let app = common::build_test_app(pool.clone());
+    common::post_json_with_token(
+        app,
+        "/connected-services/http",
+        &token,
+        json!({ "token": "my-token" }),
+    )
+    .await;
+
+    let app = common::build_test_app(pool.clone());
+    let response = common::delete_with_token(app, "/connected-services/http", &token).await;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    let app = common::build_test_app(pool);
+    let response = common::get_with_token(app, "/connected-services/http", &token).await;
+    let body = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(body["connected"], false);
+}
