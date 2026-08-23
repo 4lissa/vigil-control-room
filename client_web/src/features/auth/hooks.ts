@@ -1,9 +1,23 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMe, login, logout, register, updateProfile } from "./api";
+import {
+  connectService,
+  disconnectService,
+  getConnectedServiceStatus,
+  getMe,
+  login,
+  logout,
+  register,
+  updateProfile,
+} from "./api";
 import { getToken, setToken, clearToken } from "./token";
-import { LoginRequest, RegisterRequest, UpdateProfileRequest } from "./types";
+import {
+  ConnectServiceRequest,
+  LoginRequest,
+  RegisterRequest,
+  UpdateProfileRequest,
+} from "./types";
 
 export const useRegister = () => {
   const queryClient = useQueryClient();
@@ -74,6 +88,44 @@ export const useUpdateProfile = () => {
       updateProfile(body, getToken()!),
     onSuccess: (data) => {
       queryClient.setQueryData(["me"], data);
+    },
+  });
+};
+
+export const useConnectedServiceStatus = (service: string) =>
+  useQuery({
+    queryKey: ["connected-services", service],
+    queryFn: () => getConnectedServiceStatus(service, getToken()!),
+  });
+
+export const useConnectService = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      service,
+      body,
+    }: {
+      service: string;
+      body: ConnectServiceRequest;
+    }) => connectService(service, body, getToken()!),
+    onSuccess: (_data, { service }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["connected-services", service],
+      });
+    },
+  });
+};
+
+export const useDisconnectService = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (service: string) => disconnectService(service, getToken()!),
+    onSuccess: (_data, service) => {
+      queryClient.invalidateQueries({
+        queryKey: ["connected-services", service],
+      });
     },
   });
 };
