@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMe } from "@/features/auth";
 import {
@@ -15,6 +16,8 @@ export default function ConversationPage({
 }: {
   params: Promise<{ userId: string }>;
 }) {
+  const t = useTranslations("messages");
+  const commonT = useTranslations("common");
   const { userId } = use(params);
   const { data: user } = useMe();
   const { contacts } = useContacts(user?.id);
@@ -31,7 +34,7 @@ export default function ConversationPage({
         href="/messages"
         className="text-caption text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] w-fit"
       >
-        ← Messages
+        ← {t("backToMessages")}
       </Link>
 
       <h1 className="text-title font-medium text-[var(--color-text-primary)]">
@@ -39,7 +42,9 @@ export default function ConversationPage({
       </h1>
 
       {isLoading ? (
-        <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+        <p className="text-body text-[var(--color-text-muted)]">
+          {commonT("loading")}
+        </p>
       ) : isError ? (
         <p className="text-body text-[var(--color-danger)]">{error.message}</p>
       ) : (

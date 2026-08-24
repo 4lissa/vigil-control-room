@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Contact } from "../hooks";
 
@@ -6,13 +9,14 @@ interface ContactListProps {
   emptyMessage?: string;
 }
 
-export const ContactList = ({
-  contacts,
-  emptyMessage = "No teammates to message yet. Join a team first.",
-}: ContactListProps) => {
+export const ContactList = ({ contacts, emptyMessage }: ContactListProps) => {
+  const t = useTranslations("messages");
+
   if (contacts.length === 0) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">{emptyMessage}</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {emptyMessage ?? t("noTeammatesYet")}
+      </p>
     );
   }
 

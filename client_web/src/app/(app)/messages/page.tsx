@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMe } from "@/features/auth";
 import {
   useContacts,
@@ -13,6 +14,8 @@ import { Button } from "@/shared/ui/Button";
 import { Dialog } from "@/shared/ui/Dialog";
 
 export default function MessagesPage() {
+  const t = useTranslations("messages");
+  const commonT = useTranslations("common");
   const { data: user } = useMe();
   const { data: conversations, isLoading: conversationsLoading } =
     useConversations();
@@ -34,15 +37,17 @@ export default function MessagesPage() {
     <div className="flex flex-col gap-6 max-w-md">
       <div className="flex items-center justify-between">
         <h1 className="text-title font-medium text-[var(--color-text-primary)]">
-          Messages
+          {t("heading")}
         </h1>
         <Button variant="secondary" onClick={() => setNewMessageOpen(true)}>
-          New message
+          {t("newMessage")}
         </Button>
       </div>
 
       {conversationsLoading ? (
-        <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+        <p className="text-body text-[var(--color-text-muted)]">
+          {commonT("loading")}
+        </p>
       ) : (
         <ConversationList
           conversations={conversations ?? []}
@@ -54,17 +59,17 @@ export default function MessagesPage() {
       <Dialog
         isOpen={newMessageOpen}
         onClose={() => setNewMessageOpen(false)}
-        title="New message"
+        title={t("newMessage")}
       >
         {contactsLoading ? (
-          <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+          <p className="text-body text-[var(--color-text-muted)]">
+            {commonT("loading")}
+          </p>
         ) : (
           <ContactList
             contacts={newContacts}
             emptyMessage={
-              contacts.length > 0
-                ? "You've already started a conversation with everyone you can message."
-                : undefined
+              contacts.length > 0 ? t("alreadyMessagedEveryone") : undefined
             }
           />
         )}

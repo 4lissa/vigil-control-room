@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Contact } from "../hooks";
 import { MessageResponse } from "../types";
@@ -16,10 +19,12 @@ export const ConversationList = ({
   contacts,
   currentUserId,
 }: ConversationListProps) => {
+  const t = useTranslations("messages");
+
   if (conversations.length === 0) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        No conversations yet. Start one below.
+        {t("noConversationsYet")}
       </p>
     );
   }
