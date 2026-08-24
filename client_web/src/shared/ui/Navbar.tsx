@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { Bell, Mail, Settings, User, LogOut, Check, Plus } from "lucide-react";
@@ -12,6 +13,8 @@ import { CreateTeamForm } from "@/features/teams/components/CreateTeamForm";
 import { JoinTeamForm } from "@/features/teams/components/JoinTeamForm";
 
 export const Navbar = () => {
+  const t = useTranslations("navbar");
+  const commonT = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams<{ teamId?: string }>();
@@ -76,11 +79,11 @@ export const Navbar = () => {
             >
               <span className="flex items-end gap-2">
                 <span className="text-body font-medium leading-none text-[var(--color-text-primary)]">
-                  {activeTeam ? activeTeam.name : "No team"}
+                  {activeTeam ? activeTeam.name : t("noTeam")}
                 </span>
                 {activeTeam && activeRole && (
-                  <span className="text-caption leading-none text-[var(--color-text-muted)] capitalize">
-                    - {activeRole}
+                  <span className="text-caption leading-none text-[var(--color-text-muted)]">
+                    - {commonT(`roles.${activeRole}`)}
                   </span>
                 )}
               </span>
@@ -114,7 +117,7 @@ export const Navbar = () => {
                         href={`/teams/${team.id}`}
                         onClick={close}
                         className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
-                        aria-label={`${team.name} settings`}
+                        aria-label={t("teamSettings", { teamName: team.name })}
                       >
                         <Settings size={14} />
                       </Link>
@@ -131,7 +134,7 @@ export const Navbar = () => {
                 className={menuItemClass()}
               >
                 <Plus size={14} />
-                Create a team
+                {t("createTeam")}
               </button>
               <button
                 onClick={() => {
@@ -141,30 +144,30 @@ export const Navbar = () => {
                 className={menuItemClass()}
               >
                 <Plus size={14} />
-                Join a team
+                {t("joinTeam")}
               </button>
             </>
           )}
         </Dropdown>
 
         <Link href={incidentsHref} className={navLinkClass("/incidents")}>
-          Incidents
+          {t("incidents")}
         </Link>
         <Link href={releasesHref} className={navLinkClass("/releases")}>
-          Releases
+          {t("releases")}
         </Link>
 
         <div className="ml-auto flex items-center gap-4">
           <button
             className="inline-flex items-center h-9 px-3 rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
-            aria-label="Notifications"
+            aria-label={t("notifications")}
           >
             <Bell size={18} />
           </button>
           <Link
             href="/messages"
             className="inline-flex items-center h-9 px-3 rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
-            aria-label="Messages"
+            aria-label={t("messages")}
           >
             <Mail size={18} />
           </Link>
@@ -199,11 +202,11 @@ export const Navbar = () => {
                   className={menuItemClass()}
                 >
                   <User size={14} />
-                  Profile
+                  {t("profile")}
                 </Link>
                 <button onClick={handleLogout} className={menuItemClass(true)}>
                   <LogOut size={14} />
-                  Logout
+                  {t("logout")}
                 </button>
               </>
             )}
@@ -214,14 +217,14 @@ export const Navbar = () => {
       <Dialog
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Create a team"
+        title={t("createTeam")}
       >
         <CreateTeamForm onSuccess={() => setCreateOpen(false)} />
       </Dialog>
       <Dialog
         isOpen={joinOpen}
         onClose={() => setJoinOpen(false)}
-        title="Join a team"
+        title={t("joinTeam")}
       >
         <JoinTeamForm onSuccess={() => setJoinOpen(false)} />
       </Dialog>

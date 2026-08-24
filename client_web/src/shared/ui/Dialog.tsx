@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "./Button";
 
 interface DialogProps {
@@ -9,6 +10,7 @@ interface DialogProps {
 }
 
 export const Dialog = ({ isOpen, onClose, title, children }: DialogProps) => {
+  const t = useTranslations("common");
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export const Dialog = ({ isOpen, onClose, title, children }: DialogProps) => {
           variant="secondary"
           onClick={onClose}
           className="border-none px-2 py-1 text-[var(--color-text-muted)]"
-          aria-label="Close dialog"
+          aria-label={t("closeDialog")}
         >
           ✕
         </Button>
