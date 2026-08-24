@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCreateTeam } from "../hooks";
 import { Button } from "@/shared/ui/Button";
@@ -10,6 +11,7 @@ interface CreateTeamFormProps {
 }
 
 export const CreateTeamForm = ({ onSuccess }: CreateTeamFormProps) => {
+  const t = useTranslations("teams");
   const router = useRouter();
   const { mutate: createTeam, isPending, error } = useCreateTeam();
 
@@ -36,14 +38,14 @@ export const CreateTeamForm = ({ onSuccess }: CreateTeamFormProps) => {
           {error.message}
         </div>
       )}
-      <Input name="name" label="Team name" required />
+      <Input name="name" label={t("teamName")} required />
       <Button
         type="submit"
         variant="primary"
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Create team
+        {t("createTeam")}
       </Button>
     </form>
   );

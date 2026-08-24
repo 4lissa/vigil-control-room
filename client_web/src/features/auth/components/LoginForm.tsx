@@ -1,11 +1,13 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useLogin } from "../hooks";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
 
 export const LoginForm = () => {
+  const t = useTranslations("auth");
   const router = useRouter();
   const { mutate: login, isPending, error } = useLogin();
 
@@ -32,15 +34,15 @@ export const LoginForm = () => {
           {error.message}
         </div>
       )}
-      <Input name="email" type="email" label="Email" required />
-      <Input name="password" type="password" label="Password" required />
+      <Input name="email" type="email" label={t("email")} required />
+      <Input name="password" type="password" label={t("password")} required />
       <Button
         type="submit"
         variant="primary"
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Sign in
+        {t("signIn")}
       </Button>
     </form>
   );

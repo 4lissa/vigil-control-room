@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useCreateRule } from "../hooks";
 import { RuleResponse } from "../types";
 import { API_BASE_URL } from "@/shared/lib/api-client";
@@ -16,6 +17,8 @@ interface CreateRuleFormProps {
 }
 
 export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
+  const t = useTranslations("rule_engine");
+  const severityT = useTranslations("common.severities");
   const [reactionType, setReactionType] = useState<ReactionType>(
     "vigil_create_incident",
   );
@@ -72,13 +75,13 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
     return (
       <div className="flex flex-col gap-4">
         <p className="text-body text-[var(--color-text-primary)]">
-          Rule created. On GitHub, add a webhook on{" "}
-          <strong>{createdRule.trigger.filters["repository.full_name"]}</strong>{" "}
-          with:
+          {t("ruleCreatedIntro", {
+            repository: createdRule.trigger.filters["repository.full_name"],
+          })}
         </p>
         <div className="flex flex-col gap-1">
           <span className="text-caption font-medium text-[var(--color-text-secondary)]">
-            Payload URL
+            {t("payloadUrl")}
           </span>
           <code className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] break-all select-all">
             {webhookUrl}
@@ -86,18 +89,17 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-caption font-medium text-[var(--color-text-secondary)]">
-            Content type
+            {t("contentType")}
           </span>
           <code className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)]">
             application/json
           </code>
         </div>
         <p className="text-caption text-[var(--color-text-muted)]">
-          Set the webhook secret to the same value you entered here, and select
-          the &quot;Workflow runs&quot; event.
+          {t("webhookSecretHint")}
         </p>
         <Button variant="primary" onClick={onSuccess} className="w-full mt-2">
-          Done
+          {t("done")}
         </Button>
       </div>
     );
@@ -110,19 +112,15 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
           {error.message}
         </div>
       )}
-      <Input name="name" label="Rule name" required />
-      <Input
-        name="repository"
-        label="GitHub repository (owner/repo)"
-        required
-      />
-      <Input name="webhook_secret" label="Webhook secret" required />
+      <Input name="name" label={t("ruleName")} required />
+      <Input name="repository" label={t("githubRepository")} required />
+      <Input name="webhook_secret" label={t("webhookSecret")} required />
       <div className="flex flex-col gap-1">
         <label
           htmlFor="reaction_type"
           className="text-body font-medium text-[var(--color-text-secondary)]"
         >
-          Reaction
+          {t("reaction")}
         </label>
         <select
           id="reaction_type"
@@ -131,16 +129,16 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
           className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
         >
           <option value="vigil_create_incident">
-            VIGIL - Create an incident
+            {t("vigilCreateIncidentOption")}
           </option>
-          <option value="http_post">HTTP - Send a POST request</option>
+          <option value="http_post">{t("httpPostOption")}</option>
         </select>
       </div>
       {reactionType === "vigil_create_incident" ? (
         <>
           <Input
             name="title"
-            label="Incident title"
+            label={t("incidentTitle")}
             defaultValue="CI broken on {{repository.full_name}}"
             required
           />
@@ -149,7 +147,7 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
               htmlFor="severity"
               className="text-body font-medium text-[var(--color-text-secondary)]"
             >
-              Incident severity
+              {t("incidentSeverity")}
             </label>
             <select
               id="severity"
@@ -157,15 +155,15 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
               onChange={(e) => setSeverity(e.target.value as Severity)}
               className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
+              <option value="low">{severityT("low")}</option>
+              <option value="medium">{severityT("medium")}</option>
+              <option value="high">{severityT("high")}</option>
+              <option value="critical">{severityT("critical")}</option>
             </select>
           </div>
         </>
       ) : (
-        <Input name="url" label="Target URL" type="url" required />
+        <Input name="url" label={t("targetUrl")} type="url" required />
       )}
       <div className="flex flex-col gap-1">
         <label
@@ -173,8 +171,8 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
           className="text-body font-medium text-[var(--color-text-secondary)]"
         >
           {reactionType === "vigil_create_incident"
-            ? "Incident description (optional)"
-            : "Request body (optional)"}
+            ? t("incidentDescriptionOptional")
+            : t("requestBodyOptional")}
         </label>
         <textarea
           id="body"
@@ -190,7 +188,7 @@ export const CreateRuleForm = ({ teamId, onSuccess }: CreateRuleFormProps) => {
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Create rule
+        {t("createRule")}
       </Button>
     </form>
   );

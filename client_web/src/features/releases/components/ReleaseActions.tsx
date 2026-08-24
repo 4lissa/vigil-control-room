@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useCancelRelease } from "../hooks";
 import { ReleaseResponse } from "../types";
 import { TeamRole } from "@/features/teams";
@@ -18,6 +19,8 @@ export const ReleaseActions = ({
   release,
   currentUserRole,
 }: ReleaseActionsProps) => {
+  const t = useTranslations("releases");
+  const commonT = useTranslations("common");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const {
     mutate: cancel,
@@ -37,7 +40,7 @@ export const ReleaseActions = ({
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-        Actions
+        {commonT("actions")}
       </h2>
 
       {error && (
@@ -51,18 +54,17 @@ export const ReleaseActions = ({
         className="w-fit"
         onClick={() => setConfirmOpen(true)}
       >
-        Cancel release
+        {t("cancelRelease")}
       </Button>
 
       <Dialog
         isOpen={confirmOpen}
         onClose={() => setConfirmOpen(false)}
-        title="Cancel release"
+        title={t("cancelRelease")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-body text-[var(--color-text-secondary)]">
-            Are you sure you want to cancel <strong>{release.name}</strong>?
-            This cannot be undone.
+            {t("cancelConfirm", { releaseName: release.name })}
           </p>
           <div className="flex gap-3">
             <Button
@@ -72,10 +74,10 @@ export const ReleaseActions = ({
                 cancel(undefined, { onSuccess: () => setConfirmOpen(false) })
               }
             >
-              Confirm cancellation
+              {t("confirmCancellation")}
             </Button>
             <Button variant="secondary" onClick={() => setConfirmOpen(false)}>
-              Keep release
+              {t("keepRelease")}
             </Button>
           </div>
         </div>

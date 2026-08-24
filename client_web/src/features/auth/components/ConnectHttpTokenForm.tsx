@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   useConnectService,
   useConnectedServiceStatus,
@@ -11,6 +12,8 @@ import { Input } from "@/shared/ui/Input";
 import { CheckCircle2 } from "lucide-react";
 
 export const ConnectHttpTokenForm = () => {
+  const t = useTranslations("auth");
+  const commonT = useTranslations("common");
   const { data: status, isLoading: statusLoading } =
     useConnectedServiceStatus("http");
   const {
@@ -32,21 +35,23 @@ export const ConnectHttpTokenForm = () => {
 
   if (statusLoading) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {commonT("loading")}
+      </p>
     );
   }
 
   if (status?.connected) {
     return (
       <div className="flex items-center gap-3">
-        <Badge label="HTTP connected" icon={CheckCircle2} color="success" />
+        <Badge label={t("httpConnected")} icon={CheckCircle2} color="success" />
         <Button
           type="button"
           variant="secondary"
           isLoading={disconnecting}
           onClick={() => disconnectService("http")}
         >
-          Disconnect
+          {t("disconnect")}
         </Button>
       </div>
     );
@@ -59,14 +64,14 @@ export const ConnectHttpTokenForm = () => {
           {error.message}
         </div>
       )}
-      <Input name="token" type="password" label="HTTP personal token" />
+      <Input name="token" type="password" label={t("httpPersonalToken")} />
       <Button
         type="submit"
         variant="secondary"
         isLoading={connecting}
         className="w-fit"
       >
-        Connect
+        {t("connect")}
       </Button>
     </form>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useUpdateProfile } from "../hooks";
 import { UserResponse } from "../types";
 import { Button } from "@/shared/ui/Button";
@@ -11,6 +12,7 @@ interface ProfileFormProps {
 }
 
 export const ProfileForm = ({ user }: ProfileFormProps) => {
+  const t = useTranslations("auth");
   const {
     mutate: updateProfile,
     isPending,
@@ -32,14 +34,16 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
     const new_password =
       (form.elements.namedItem("new_password") as HTMLInputElement | null)
         ?.value ?? "";
+    const language = (form.elements.namedItem("language") as HTMLSelectElement)
+      .value;
 
     if (new_password && !old_password) {
-      setPasswordError("Current password is required to set a new one");
+      setPasswordError(t("currentPasswordRequired"));
       return;
     }
 
     if (old_password && !new_password) {
-      setPasswordError("New password is required");
+      setPasswordError(t("newPasswordRequired"));
       return;
     }
 
@@ -47,6 +51,7 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
       username: username || undefined,
       old_password: old_password || undefined,
       new_password: new_password || undefined,
+      language,
     });
   };
 
@@ -59,22 +64,48 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
       )}
       {isSuccess && (
         <div className="px-4 py-2 text-body rounded-md border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success)]">
-          Profile updated
+          {t("profileUpdated")}
         </div>
       )}
 
-      <Input name="username" label="Username" defaultValue={user.username} />
+      <Input
+        name="username"
+        label={t("username")}
+        defaultValue={user.username}
+      />
+
+      <div className="flex flex-col gap-1">
+        <label
+          htmlFor="language"
+          className="text-body font-medium text-[var(--color-text-secondary)]"
+        >
+          {t("language")}
+        </label>
+        <select
+          id="language"
+          name="language"
+          defaultValue={user.language}
+          className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
+        >
+          <option value="en">English</option>
+          <option value="fr">Français</option>
+        </select>
+      </div>
 
       {user.has_password && (
         <div className="border-t border-[var(--color-border)] pt-4 flex flex-col gap-4">
           <p className="text-body text-[var(--color-text-muted)]">
-            Change password
+            {t("changePassword")}
           </p>
-          <Input name="old_password" type="password" label="Current password" />
+          <Input
+            name="old_password"
+            type="password"
+            label={t("currentPassword")}
+          />
           <Input
             name="new_password"
             type="password"
-            label="New password"
+            label={t("newPassword")}
             error={passwordError}
           />
         </div>
@@ -86,7 +117,7 @@ export const ProfileForm = ({ user }: ProfileFormProps) => {
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Save changes
+        {t("saveChanges")}
       </Button>
     </form>
   );

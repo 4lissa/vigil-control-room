@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NextIntlClientProvider } from "next-intl";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/node";
 import { setToken } from "@/features/auth/token";
 import { Navbar } from "./Navbar";
+import messages from "../../../messages/en.json";
 
 const push = vi.fn();
 let mockPathname = "/teams/team-123/incidents";
@@ -25,9 +27,11 @@ const renderNavbar = () => {
     },
   });
   return render(
-    <QueryClientProvider client={queryClient}>
-      <Navbar />
-    </QueryClientProvider>,
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <QueryClientProvider client={queryClient}>
+        <Navbar />
+      </QueryClientProvider>
+    </NextIntlClientProvider>,
   );
 };
 
@@ -48,7 +52,7 @@ describe("Navbar", () => {
       expect(screen.getByText("My Team")).toBeInTheDocument(),
     );
     await waitFor(() =>
-      expect(screen.getByText("- manager")).toBeInTheDocument(),
+      expect(screen.getByText("- Manager")).toBeInTheDocument(),
     );
   });
 

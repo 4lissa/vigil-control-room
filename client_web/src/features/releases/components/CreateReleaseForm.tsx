@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useCreateRelease } from "../hooks";
 import { Button } from "@/shared/ui/Button";
 import { Input } from "@/shared/ui/Input";
@@ -13,6 +14,7 @@ export const CreateReleaseForm = ({
   teamId,
   onSuccess,
 }: CreateReleaseFormProps) => {
+  const t = useTranslations("releases");
   const { mutate: createRelease, isPending, error } = useCreateRelease(teamId);
 
   const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -36,13 +38,13 @@ export const CreateReleaseForm = ({
           {error.message}
         </div>
       )}
-      <Input name="name" label="Release name" required />
+      <Input name="name" label={t("releaseName")} required />
       <div className="flex flex-col gap-1">
         <label
           htmlFor="steps"
           className="text-body font-medium text-[var(--color-text-secondary)]"
         >
-          Steps (one per line, in order)
+          {t("stepsLabel")}
         </label>
         <textarea
           id="steps"
@@ -58,7 +60,7 @@ export const CreateReleaseForm = ({
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Create release
+        {t("createRelease")}
       </Button>
     </form>
   );

@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
 import { Dialog } from "./Dialog";
+import messages from "../../../messages/en.json";
 
 beforeEach(() => {
   HTMLDialogElement.prototype.showModal = vi.fn();
@@ -10,9 +12,11 @@ beforeEach(() => {
 
 const renderDialog = (isOpen: boolean, onClose: () => void = () => {}) =>
   render(
-    <Dialog isOpen={isOpen} onClose={onClose} title="Create team">
-      <p>Content</p>
-    </Dialog>,
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <Dialog isOpen={isOpen} onClose={onClose} title="Create team">
+        <p>Content</p>
+      </Dialog>
+    </NextIntlClientProvider>,
   );
 
 describe("Dialog", () => {
@@ -40,9 +44,11 @@ describe("Dialog", () => {
     const { rerender } = renderDialog(true);
 
     rerender(
-      <Dialog isOpen={false} onClose={() => {}} title="Create team">
-        <p>Content</p>
-      </Dialog>,
+      <NextIntlClientProvider locale="en" messages={messages}>
+        <Dialog isOpen={false} onClose={() => {}} title="Create team">
+          <p>Content</p>
+        </Dialog>
+      </NextIntlClientProvider>,
     );
 
     expect(HTMLDialogElement.prototype.close).toHaveBeenCalled();

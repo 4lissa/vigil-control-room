@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { IncidentResponse } from "../types";
 import { StateBadge } from "./StateBadge";
@@ -9,10 +12,12 @@ interface IncidentListProps {
 }
 
 export const IncidentList = ({ teamId, incidents }: IncidentListProps) => {
+  const t = useTranslations("incidents");
+
   if (incidents.length === 0) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        No incidents yet.
+        {t("noIncidentsYet")}
       </p>
     );
   }

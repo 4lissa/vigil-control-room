@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useSendMessage } from "../hooks";
 import { MessageResponse } from "../types";
 import { Button } from "@/shared/ui/Button";
@@ -27,6 +28,7 @@ export const ConversationThread = ({
   currentUserId,
   messages,
 }: ConversationThreadProps) => {
+  const t = useTranslations("messages");
   const { mutate: send, isPending, error } = useSendMessage(userId);
 
   const handleSend = (e: React.SyntheticEvent<HTMLFormElement>) => {
@@ -43,7 +45,7 @@ export const ConversationThread = ({
     <div className="flex flex-col gap-4">
       {messages.length === 0 ? (
         <p className="text-body text-[var(--color-text-muted)]">
-          No messages yet. Say hello to {otherUsername}.
+          {t("noMessagesYet", { username: otherUsername })}
         </p>
       ) : (
         <div className="rounded-md border border-[var(--color-border)] overflow-hidden">
@@ -54,7 +56,9 @@ export const ConversationThread = ({
             >
               <div className="flex items-center justify-between">
                 <span className="text-caption font-medium text-[var(--color-text-primary)]">
-                  {message.sender_id === currentUserId ? "You" : otherUsername}
+                  {message.sender_id === currentUserId
+                    ? t("you")
+                    : otherUsername}
                 </span>
                 <span className="text-caption text-[var(--color-text-muted)]">
                   {formatDate(message.created_at)}
@@ -78,7 +82,7 @@ export const ConversationThread = ({
           htmlFor="content"
           className="text-body font-medium text-[var(--color-text-secondary)]"
         >
-          Message {otherUsername}
+          {t("messageUser", { username: otherUsername })}
         </label>
         <textarea
           id="content"
@@ -93,7 +97,7 @@ export const ConversationThread = ({
           isLoading={isPending}
           className="w-fit"
         >
-          Send
+          {t("send")}
         </Button>
       </form>
     </div>

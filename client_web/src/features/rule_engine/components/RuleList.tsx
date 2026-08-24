@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useDeleteRule, useUpdateRule } from "../hooks";
 import { RuleResponse } from "../types";
 import { API_BASE_URL } from "@/shared/lib/api-client";
@@ -15,6 +16,8 @@ interface RuleListProps {
 }
 
 export const RuleList = ({ teamId, rules }: RuleListProps) => {
+  const t = useTranslations("rule_engine");
+  const commonT = useTranslations("common");
   const [deleteTarget, setDeleteTarget] = useState<RuleResponse | null>(null);
   const { mutate: updateRule } = useUpdateRule(teamId);
   const {
@@ -25,7 +28,9 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
 
   if (rules.length === 0) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">No rules yet.</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {t("noRulesYet")}
+      </p>
     );
   }
 
@@ -47,8 +52,8 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
                 {rule.name}
               </span>
               <span className="text-caption text-[var(--color-text-muted)] truncate">
-                {rule.trigger.service}/{rule.trigger.event} on{" "}
-                {rule.trigger.filters["repository.full_name"] ?? "any repo"} →{" "}
+                {rule.trigger.service}/{rule.trigger.event} {t("on")}{" "}
+                {rule.trigger.filters["repository.full_name"] ?? t("anyRepo")} →{" "}
                 {rule.reaction.type}
               </span>
               {rule.trigger.service === "github" && (
@@ -74,9 +79,17 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
                 }
               >
                 {rule.enabled ? (
-                  <Badge label="Enabled" icon={CheckCircle2} color="success" />
+                  <Badge
+                    label={t("enabled")}
+                    icon={CheckCircle2}
+                    color="success"
+                  />
                 ) : (
-                  <Badge label="Disabled" icon={CircleOff} color="neutral" />
+                  <Badge
+                    label={t("disabled")}
+                    icon={CircleOff}
+                    color="neutral"
+                  />
                 )}
               </button>
               <button
@@ -84,7 +97,7 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
                 onClick={() => setDeleteTarget(rule)}
                 className="text-caption text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:underline"
               >
-                Delete
+                {t("delete")}
               </button>
             </div>
           </div>
@@ -94,7 +107,7 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
       <Dialog
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete rule"
+        title={t("deleteRuleTitle")}
       >
         <div className="flex flex-col gap-4">
           {deleteError && (
@@ -103,8 +116,7 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
             </div>
           )}
           <p className="text-body text-[var(--color-text-primary)]">
-            Delete <strong>{deleteTarget?.name}</strong>? The webhook on GitHub
-            will keep sending events, but they will be rejected.
+            {t("deleteConfirm", { name: deleteTarget?.name ?? "" })}
           </p>
           <div className="flex gap-3">
             <Button
@@ -112,10 +124,10 @@ export const RuleList = ({ teamId, rules }: RuleListProps) => {
               isLoading={deleting}
               onClick={handleDelete}
             >
-              Delete {deleteTarget?.name}
+              {t("deleteButton", { name: deleteTarget?.name ?? "" })}
             </Button>
             <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
-              Cancel
+              {commonT("cancel")}
             </Button>
           </div>
         </div>

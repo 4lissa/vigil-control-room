@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useAddTimelineEntry, useEditTimelineEntry } from "../hooks";
 import {
   Emoji,
@@ -21,11 +22,6 @@ interface TimelineProps {
   availableEmojis: Emoji[];
   reactions: ReactionSummaryResponse[];
 }
-
-const authorName = (authorId: string | null, members: TeamMemberResponse[]) => {
-  if (!authorId) return "Unknown";
-  return members.find((m) => m.user_id === authorId)?.username ?? authorId;
-};
 
 const formatDate = (unixSeconds: number) =>
   new Date(unixSeconds * 1000).toLocaleString();
@@ -54,12 +50,19 @@ const TimelineEntry = ({
   availableEmojis: Emoji[];
   reactions: ReactionSummaryResponse[];
 }) => {
+  const t = useTranslations("incidents");
+  const commonT = useTranslations("common");
   const [isEditing, setIsEditing] = useState(false);
   const {
     mutate: editEntry,
     isPending,
     error,
   } = useEditTimelineEntry(teamId, incidentId);
+
+  const authorName = (authorId: string | null) => {
+    if (!authorId) return t("unknownAuthor");
+    return members.find((m) => m.user_id === authorId)?.username ?? authorId;
+  };
 
   const handleSave = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -76,12 +79,12 @@ const TimelineEntry = ({
     <div className="flex flex-col gap-1 px-4 py-3 border-b border-[var(--color-border)] last:border-0">
       <div className="flex items-center justify-between">
         <span className="text-caption font-medium text-[var(--color-text-primary)]">
-          {authorName(entry.author_id, members)}
+          {authorName(entry.author_id)}
         </span>
         <div className="flex items-center gap-2">
           <span className="text-caption text-[var(--color-text-muted)]">
             {formatDate(entry.created_at)}
-            {entry.edited_at ? " (edited)" : ""}
+            {entry.edited_at ? t("edited") : ""}
           </span>
           {canEdit && !isEditing && (
             <button
@@ -89,7 +92,7 @@ const TimelineEntry = ({
               onClick={() => setIsEditing(true)}
               className="text-caption text-[var(--color-accent)] hover:underline"
             >
-              Edit
+              {t("edit")}
             </button>
           )}
         </div>
@@ -103,7 +106,7 @@ const TimelineEntry = ({
             </div>
           )}
           <label htmlFor={`edit-content-${entry.id}`} className="sr-only">
-            Edit timeline entry
+            {t("editTimelineEntry")}
           </label>
           <textarea
             id={`edit-content-${entry.id}`}
@@ -115,14 +118,14 @@ const TimelineEntry = ({
           />
           <div className="flex gap-2">
             <Button type="submit" variant="primary" isLoading={isPending}>
-              Save
+              {t("save")}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={() => setIsEditing(false)}
             >
-              Cancel
+              {commonT("cancel")}
             </Button>
           </div>
         </form>
@@ -153,6 +156,7 @@ export const Timeline = ({
   availableEmojis,
   reactions,
 }: TimelineProps) => {
+  const t = useTranslations("incidents");
   const {
     mutate: addEntry,
     isPending: adding,
@@ -180,12 +184,12 @@ export const Timeline = ({
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-        Timeline
+        {t("timeline")}
       </h2>
 
       {entries.length === 0 ? (
         <p className="text-body text-[var(--color-text-muted)]">
-          No timeline entries yet.
+          {t("noTimelineEntriesYet")}
         </p>
       ) : (
         <div className="rounded-md border border-[var(--color-border)] overflow-hidden">
@@ -215,7 +219,7 @@ export const Timeline = ({
             htmlFor="content"
             className="text-body font-medium text-[var(--color-text-secondary)]"
           >
-            Add a timeline entry
+            {t("addTimelineEntry")}
           </label>
           <textarea
             id="content"
@@ -230,7 +234,7 @@ export const Timeline = ({
             isLoading={adding}
             className="w-fit"
           >
-            Add entry
+            {t("addEntry")}
           </Button>
         </form>
       )}

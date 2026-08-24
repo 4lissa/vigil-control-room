@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMe } from "@/features/auth";
 import { useTeam, useTeamMembers, setLastTeamId } from "@/features/teams";
 import { useIncidents, useIncidentsRealtime } from "@/features/incidents";
@@ -14,6 +15,9 @@ export default function TeamIncidentsPage({
 }: {
   params: Promise<{ teamId: string }>;
 }) {
+  const t = useTranslations("incidents");
+  const commonT = useTranslations("common");
+  const teamsT = useTranslations("teams");
   const { teamId } = use(params);
   const { data: user } = useMe();
   const { data: team, isLoading: teamLoading } = useTeam(teamId);
@@ -29,14 +33,16 @@ export default function TeamIncidentsPage({
 
   if (teamLoading || incidentsLoading) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {commonT("loading")}
+      </p>
     );
   }
 
   if (!team || !incidents) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        Team not found.
+        {teamsT("teamNotFound")}
       </p>
     );
   }
@@ -48,11 +54,11 @@ export default function TeamIncidentsPage({
     <div className="flex flex-col gap-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="text-title font-medium text-[var(--color-text-primary)]">
-          Incidents - {team.name}
+          {t("heading", { teamName: team.name })}
         </h1>
         {isManager && (
           <Button variant="primary" onClick={() => setCreateOpen(true)}>
-            Create incident
+            {t("createIncident")}
           </Button>
         )}
       </div>
@@ -62,7 +68,7 @@ export default function TeamIncidentsPage({
       <Dialog
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Create an incident"
+        title={t("createIncidentTitle")}
       >
         <CreateIncidentForm
           teamId={teamId}

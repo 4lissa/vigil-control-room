@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useMe } from "@/features/auth";
 import { useTeamMembers } from "@/features/teams";
@@ -18,6 +19,8 @@ export default function ReleaseDetailPage({
 }: {
   params: Promise<{ teamId: string; releaseId: string }>;
 }) {
+  const t = useTranslations("releases");
+  const commonT = useTranslations("common");
   const { teamId, releaseId } = use(params);
   const { data: user } = useMe();
   const { data: members } = useTeamMembers(teamId);
@@ -28,14 +31,16 @@ export default function ReleaseDetailPage({
 
   if (isLoading) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {commonT("loading")}
+      </p>
     );
   }
 
   if (!release) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        Release not found.
+        {t("releaseNotFound")}
       </p>
     );
   }
@@ -52,7 +57,7 @@ export default function ReleaseDetailPage({
         href={`/teams/${teamId}/releases`}
         className="text-caption text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] w-fit"
       >
-        ← Releases
+        ← {t("backToReleases")}
       </Link>
 
       <div className="flex flex-col gap-3">

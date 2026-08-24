@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useMe } from "@/features/auth/hooks";
+import { useMe, useSyncLocale } from "@/features/auth/hooks";
 import { useTeamRealtime } from "@/features/teams";
 import { Navbar } from "@/shared/ui/Navbar";
 import { WebSocketProvider } from "@/shared/providers/WebSocketProvider";
@@ -11,6 +11,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const { data: user } = useMe();
 
   useTeamRealtime(user?.username);
+  useSyncLocale();
 
   return (
     <div className="min-h-screen flex flex-col">

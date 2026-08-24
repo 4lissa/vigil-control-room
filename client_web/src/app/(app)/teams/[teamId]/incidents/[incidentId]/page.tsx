@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import { useMe } from "@/features/auth";
@@ -23,6 +24,8 @@ export default function IncidentDetailPage({
 }: {
   params: Promise<{ teamId: string; incidentId: string }>;
 }) {
+  const t = useTranslations("incidents");
+  const commonT = useTranslations("common");
   const { teamId, incidentId } = use(params);
   const { data: user } = useMe();
   const { data: members } = useTeamMembers(teamId);
@@ -38,14 +41,16 @@ export default function IncidentDetailPage({
 
   if (isLoading) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {commonT("loading")}
+      </p>
     );
   }
 
   if (!incident) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        Incident not found.
+        {t("incidentNotFound")}
       </p>
     );
   }
@@ -61,7 +66,7 @@ export default function IncidentDetailPage({
         href={`/teams/${teamId}/incidents`}
         className="text-caption text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] w-fit"
       >
-        ← Incidents
+        ← {t("backToIncidents")}
       </Link>
 
       <div className="flex flex-col gap-3">
@@ -78,12 +83,12 @@ export default function IncidentDetailPage({
           </p>
         )}
         <p className="text-caption text-[var(--color-text-muted)]">
-          Assigned to:{" "}
-          {assignedMember?.username ?? incident.assigned_to ?? "Unassigned"}
+          {t("assignedTo")}{" "}
+          {assignedMember?.username ?? incident.assigned_to ?? t("unassigned")}
         </p>
         {linkedRelease && (
           <p className="text-caption text-[var(--color-text-muted)]">
-            Linked release:{" "}
+            {t("linkedRelease")}{" "}
             <Link
               href={`/teams/${teamId}/releases/${linkedRelease.id}`}
               className="text-[var(--color-accent)] hover:underline"

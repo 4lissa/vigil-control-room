@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ReleaseResponse } from "../types";
 import { ReleaseStateBadge } from "./ReleaseStateBadge";
@@ -8,10 +11,12 @@ interface ReleaseListProps {
 }
 
 export const ReleaseList = ({ teamId, releases }: ReleaseListProps) => {
+  const t = useTranslations("releases");
+
   if (releases.length === 0) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        No releases yet.
+        {t("noReleasesYet")}
       </p>
     );
   }
