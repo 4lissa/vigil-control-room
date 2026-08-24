@@ -8,6 +8,7 @@ export {
   useLogout,
   useMe,
   useRegister,
+  useSyncLocale,
   useUpdateProfile,
 } from "./hooks";
 export type {

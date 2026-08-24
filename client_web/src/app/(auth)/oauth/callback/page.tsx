@@ -1,12 +1,14 @@
 "use client";
 
 import { Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { useHandleOAuthCallback } from "@/features/auth/hooks";
 
 const OAuthCallback = () => {
+  const t = useTranslations("auth");
   useHandleOAuthCallback();
   return (
-    <p className="text-body text-[var(--color-text-muted)]">Signing you in…</p>
+    <p className="text-body text-[var(--color-text-muted)]">{t("signingIn")}</p>
   );
 };
 

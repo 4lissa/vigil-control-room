@@ -129,3 +129,21 @@ export const useDisconnectService = () => {
     },
   });
 };
+
+export const useSyncLocale = () => {
+  const router = useRouter();
+  const { data: user } = useMe();
+
+  useEffect(() => {
+    if (!user?.language) return;
+
+    const current = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("NEXT_LOCALE="))
+      ?.split("=")[1];
+    if (current === user.language) return;
+
+    document.cookie = `NEXT_LOCALE=${user.language}; path=/; max-age=31536000`;
+    router.refresh();
+  }, [user?.language, router]);
+};
