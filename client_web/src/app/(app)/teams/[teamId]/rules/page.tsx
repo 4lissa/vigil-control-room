@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useMe } from "@/features/auth";
 import { useTeam, useTeamMembers, setLastTeamId } from "@/features/teams";
 import { useRules, useRuleEventsFeed } from "@/features/rule_engine";
@@ -14,6 +15,9 @@ export default function TeamRulesPage({
 }: {
   params: Promise<{ teamId: string }>;
 }) {
+  const t = useTranslations("rule_engine");
+  const commonT = useTranslations("common");
+  const teamsT = useTranslations("teams");
   const { teamId } = use(params);
   const { data: user } = useMe();
   const { data: team, isLoading: teamLoading } = useTeam(teamId);
@@ -31,14 +35,16 @@ export default function TeamRulesPage({
 
   if (teamLoading) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {commonT("loading")}
+      </p>
     );
   }
 
   if (!team) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        Team not found.
+        {teamsT("teamNotFound")}
       </p>
     );
   }
@@ -46,7 +52,7 @@ export default function TeamRulesPage({
   if (!isManager) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        Only the team&apos;s manager can configure automation rules.
+        {t("managerOnly")}
       </p>
     );
   }
@@ -55,15 +61,17 @@ export default function TeamRulesPage({
     <div className="flex flex-col gap-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <h1 className="text-title font-medium text-[var(--color-text-primary)]">
-          Automation rules - {team.name}
+          {t("heading", { teamName: team.name })}
         </h1>
         <Button variant="primary" onClick={() => setCreateOpen(true)}>
-          Create rule
+          {t("createRule")}
         </Button>
       </div>
 
       {rulesLoading || !rules ? (
-        <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+        <p className="text-body text-[var(--color-text-muted)]">
+          {commonT("loading")}
+        </p>
       ) : (
         <RuleList teamId={teamId} rules={rules} />
       )}
@@ -71,7 +79,7 @@ export default function TeamRulesPage({
       {events.length > 0 && (
         <div className="flex flex-col gap-2">
           <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-            Live feed
+            {t("liveFeed")}
           </h2>
           <div className="rounded-md border border-[var(--color-border)] overflow-hidden">
             {events.map((event) => (
@@ -100,7 +108,7 @@ export default function TeamRulesPage({
       <Dialog
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Create a rule"
+        title={t("createRuleTitle")}
       >
         <CreateRuleForm
           teamId={teamId}
