@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CheckCircle2, Circle } from "lucide-react";
 import { useValidateStep } from "../hooks";
 import { ReleaseStepResponse } from "../types";
@@ -21,6 +22,7 @@ export const StepList = ({
   steps,
   canValidate,
 }: StepListProps) => {
+  const t = useTranslations("releases");
   const {
     mutate: validateStep,
     isPending,
@@ -32,7 +34,7 @@ export const StepList = ({
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-        Steps
+        {t("steps")}
       </h2>
 
       {error && (
@@ -68,7 +70,7 @@ export const StepList = ({
                 </span>
                 {isValidated && (
                   <span className="text-caption text-[var(--color-text-muted)]">
-                    validated {formatDate(step.validated_at!)}
+                    {t("validated", { date: formatDate(step.validated_at!) })}
                   </span>
                 )}
               </div>
@@ -78,7 +80,7 @@ export const StepList = ({
                   isLoading={isPending}
                   onClick={() => validateStep(step.id)}
                 >
-                  Validate
+                  {t("validate")}
                 </Button>
               )}
             </div>

@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Circle, PlayCircle, CheckCircle2, XCircle, Lock } from "lucide-react";
 import { ReleaseState } from "../types";
 import { Badge, BadgeColor } from "@/shared/ui/Badge";
@@ -8,16 +9,17 @@ interface ReleaseStateBadgeProps {
 
 const stateConfig: Record<
   ReleaseState,
-  { label: string; icon: typeof Circle; color: BadgeColor }
+  { icon: typeof Circle; color: BadgeColor }
 > = {
-  created: { label: "Created", icon: Circle, color: "neutral" },
-  in_progress: { label: "In progress", icon: PlayCircle, color: "accent" },
-  completed: { label: "Completed", icon: CheckCircle2, color: "success" },
-  cancelled: { label: "Cancelled", icon: XCircle, color: "neutral" },
-  blocked: { label: "Blocked", icon: Lock, color: "danger" },
+  created: { icon: Circle, color: "neutral" },
+  in_progress: { icon: PlayCircle, color: "accent" },
+  completed: { icon: CheckCircle2, color: "success" },
+  cancelled: { icon: XCircle, color: "neutral" },
+  blocked: { icon: Lock, color: "danger" },
 };
 
 export const ReleaseStateBadge = ({ state }: ReleaseStateBadgeProps) => {
-  const { label, icon, color } = stateConfig[state];
-  return <Badge label={label} icon={icon} color={color} />;
+  const t = useTranslations("common.releaseStates");
+  const { icon, color } = stateConfig[state];
+  return <Badge label={t(state)} icon={icon} color={color} />;
 };
