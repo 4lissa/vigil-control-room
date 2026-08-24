@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useCreateIncident } from "../hooks";
 import { Severity } from "../types";
 import { useReleases } from "@/features/releases";
@@ -16,6 +17,8 @@ export const CreateIncidentForm = ({
   teamId,
   onSuccess,
 }: CreateIncidentFormProps) => {
+  const t = useTranslations("incidents");
+  const severityT = useTranslations("common.severities");
   const [severity, setSeverity] = useState<Severity>("medium");
   const [releaseId, setReleaseId] = useState("");
   const {
@@ -55,13 +58,13 @@ export const CreateIncidentForm = ({
           {error.message}
         </div>
       )}
-      <Input name="title" label="Title" required />
+      <Input name="title" label={t("title")} required />
       <div className="flex flex-col gap-1">
         <label
           htmlFor="description"
           className="text-body font-medium text-[var(--color-text-secondary)]"
         >
-          Description
+          {t("description")}
         </label>
         <textarea
           id="description"
@@ -75,7 +78,7 @@ export const CreateIncidentForm = ({
           htmlFor="severity"
           className="text-body font-medium text-[var(--color-text-secondary)]"
         >
-          Severity
+          {t("severity")}
         </label>
         <select
           id="severity"
@@ -83,10 +86,10 @@ export const CreateIncidentForm = ({
           onChange={(e) => setSeverity(e.target.value as Severity)}
           className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
         >
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="critical">Critical</option>
+          <option value="low">{severityT("low")}</option>
+          <option value="medium">{severityT("medium")}</option>
+          <option value="high">{severityT("high")}</option>
+          <option value="critical">{severityT("critical")}</option>
         </select>
       </div>
       {linkableReleases.length > 0 && (
@@ -95,7 +98,7 @@ export const CreateIncidentForm = ({
             htmlFor="release"
             className="text-body font-medium text-[var(--color-text-secondary)]"
           >
-            Link to release (optional)
+            {t("linkToRelease")}
           </label>
           <select
             id="release"
@@ -103,7 +106,7 @@ export const CreateIncidentForm = ({
             onChange={(e) => setReleaseId(e.target.value)}
             className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
           >
-            <option value="">None</option>
+            <option value="">{t("none")}</option>
             {linkableReleases.map((release) => (
               <option key={release.id} value={release.id}>
                 {release.name}
@@ -118,7 +121,7 @@ export const CreateIncidentForm = ({
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Create incident
+        {t("createIncident")}
       </Button>
     </form>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useAddReaction, useRemoveReaction } from "../hooks";
 import { Emoji, ReactionSummaryResponse } from "../types";
 
@@ -27,6 +28,7 @@ export const ReactionBar = ({
   availableEmojis,
   reactions,
 }: ReactionBarProps) => {
+  const t = useTranslations("incidents");
   const {
     mutate: addReaction,
     isPending: adding,
@@ -66,8 +68,11 @@ export const ReactionBar = ({
                 aria-pressed={reacted}
                 aria-label={
                   usernames.length > 0
-                    ? `React with ${emoji} (${usernames.join(", ")})`
-                    : `React with ${emoji}`
+                    ? t("reactWithUsers", {
+                        emoji,
+                        usernames: usernames.join(", "),
+                      })
+                    : t("reactWith", { emoji })
                 }
                 onClick={() => toggle(emoji, reacted)}
                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-caption transition-colors disabled:opacity-50 disabled:cursor-wait ${

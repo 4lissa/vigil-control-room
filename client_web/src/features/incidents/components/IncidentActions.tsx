@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   useAcknowledgeIncident,
   useEscalateIncident,
@@ -24,6 +25,9 @@ export const IncidentActions = ({
   members,
   currentUserRole,
 }: IncidentActionsProps) => {
+  const t = useTranslations("incidents");
+  const commonT = useTranslations("common");
+  const severityT = useTranslations("common.severities");
   const [escalateSeverity, setEscalateSeverity] = useState<Severity>(
     incident.severity,
   );
@@ -71,7 +75,7 @@ export const IncidentActions = ({
   return (
     <div className="flex flex-col gap-4">
       <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-        Actions
+        {commonT("actions")}
       </h2>
 
       {error && (
@@ -87,7 +91,7 @@ export const IncidentActions = ({
             isLoading={acknowledging}
             onClick={() => acknowledge()}
           >
-            Acknowledge
+            {t("acknowledge")}
           </Button>
         )}
 
@@ -97,7 +101,7 @@ export const IncidentActions = ({
               htmlFor="escalate-severity"
               className="text-caption font-medium text-[var(--color-text-secondary)]"
             >
-              New severity
+              {t("newSeverity")}
             </label>
             <div className="flex items-center gap-2">
               <select
@@ -108,17 +112,17 @@ export const IncidentActions = ({
                 }
                 className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
+                <option value="low">{severityT("low")}</option>
+                <option value="medium">{severityT("medium")}</option>
+                <option value="high">{severityT("high")}</option>
+                <option value="critical">{severityT("critical")}</option>
               </select>
               <Button
                 variant="secondary"
                 isLoading={escalating}
                 onClick={() => escalate({ severity: escalateSeverity })}
               >
-                Escalate
+                {t("escalate")}
               </Button>
             </div>
           </div>
@@ -130,7 +134,7 @@ export const IncidentActions = ({
             isLoading={resolving}
             onClick={() => resolve()}
           >
-            Resolve
+            {t("resolve")}
           </Button>
         )}
       </div>
@@ -141,7 +145,7 @@ export const IncidentActions = ({
             htmlFor="assign-to"
             className="text-caption font-medium text-[var(--color-text-secondary)]"
           >
-            Assign to
+            {t("assignToLabel")}
           </label>
           <div className="flex items-center gap-2">
             <select
@@ -150,7 +154,7 @@ export const IncidentActions = ({
               onChange={(e) => setAssignedTo(e.target.value)}
               className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
             >
-              <option value="">Unassigned</option>
+              <option value="">{t("unassigned")}</option>
               {members.map((m) => (
                 <option key={m.id} value={m.user_id}>
                   {m.username ?? m.user_id}
@@ -162,7 +166,7 @@ export const IncidentActions = ({
               isLoading={assigning}
               onClick={() => assign({ user_id: assignedTo || null })}
             >
-              Assign
+              {t("assign")}
             </Button>
           </div>
         </div>
