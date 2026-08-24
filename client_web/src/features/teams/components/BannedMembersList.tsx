@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useTeamBans, useUnbanMember } from "../hooks";
 
 interface BannedMembersListProps {
@@ -10,6 +11,7 @@ const formatDate = (unixSeconds: number) =>
   new Date(unixSeconds * 1000).toLocaleString();
 
 export const BannedMembersList = ({ teamId }: BannedMembersListProps) => {
+  const t = useTranslations("teams");
   const { data: bans, isLoading } = useTeamBans(teamId);
   const { mutate: unban, isPending, error } = useUnbanMember(teamId);
 
@@ -20,7 +22,7 @@ export const BannedMembersList = ({ teamId }: BannedMembersListProps) => {
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-        Banned members ({bans.length})
+        {t("bannedMembers", { count: bans.length })}
       </h2>
       {error && (
         <div className="px-4 py-2 text-body rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
@@ -38,7 +40,9 @@ export const BannedMembersList = ({ teamId }: BannedMembersListProps) => {
                 {ban.username}
               </span>
               <span className="text-caption text-[var(--color-text-muted)]">
-                {ban.until ? `Until ${formatDate(ban.until)}` : "Permanent ban"}
+                {ban.until
+                  ? t("until", { date: formatDate(ban.until) })
+                  : t("permanentBan")}
               </span>
             </div>
             <button
@@ -47,7 +51,7 @@ export const BannedMembersList = ({ teamId }: BannedMembersListProps) => {
               onClick={() => unban(ban.user_id)}
               className="text-caption text-[var(--color-accent)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Unban
+              {t("unban")}
             </button>
           </div>
         ))}

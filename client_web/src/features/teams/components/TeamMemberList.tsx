@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useBanMember, useKickMember } from "../hooks";
 import { TeamMemberResponse, TeamRole } from "../types";
 import { Button } from "@/shared/ui/Button";
@@ -21,6 +22,8 @@ export const TeamMemberList = ({
   currentUserId,
   currentUserRole,
 }: TeamMemberListProps) => {
+  const t = useTranslations("teams");
+  const commonT = useTranslations("common");
   const [kickTarget, setKickTarget] = useState<TeamMemberResponse | null>(null);
   const [banTarget, setBanTarget] = useState<TeamMemberResponse | null>(null);
   const [banUntil, setBanUntil] = useState("");
@@ -62,7 +65,7 @@ export const TeamMemberList = ({
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-        Members ({members.length})
+        {t("members", { count: members.length })}
       </h2>
       <div className="rounded-md border border-[var(--color-border)] overflow-hidden">
         {members.map((member) => (
@@ -78,14 +81,14 @@ export const TeamMemberList = ({
                 {member.username ?? member.user_id}
                 {member.user_id === currentUserId && (
                   <span className="ml-2 text-caption text-[var(--color-text-muted)]">
-                    (you)
+                    {t("you")}
                   </span>
                 )}
               </span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-caption text-[var(--color-text-muted)] capitalize">
-                {member.role}
+              <span className="text-caption text-[var(--color-text-muted)]">
+                {commonT(`roles.${member.role}`)}
               </span>
               {canModerate && member.user_id !== currentUserId && (
                 <div className="flex items-center gap-3">
@@ -94,14 +97,14 @@ export const TeamMemberList = ({
                     onClick={() => setKickTarget(member)}
                     className="text-caption text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:underline"
                   >
-                    Kick
+                    {t("kick")}
                   </button>
                   <button
                     type="button"
                     onClick={() => setBanTarget(member)}
                     className="text-caption text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:underline"
                   >
-                    Ban
+                    {t("ban")}
                   </button>
                 </div>
               )}
@@ -113,7 +116,7 @@ export const TeamMemberList = ({
       <Dialog
         isOpen={!!kickTarget}
         onClose={() => setKickTarget(null)}
-        title="Kick member"
+        title={t("kickMemberTitle")}
       >
         <div className="flex flex-col gap-4">
           {kickError && (
@@ -122,22 +125,29 @@ export const TeamMemberList = ({
             </div>
           )}
           <p className="text-body text-[var(--color-text-primary)]">
-            Remove{" "}
-            <strong>{kickTarget?.username ?? kickTarget?.user_id}</strong> from{" "}
-            {teamName}? They can rejoin later with a new invitation code.
+            {t("kickConfirm", {
+              member: kickTarget?.username ?? kickTarget?.user_id ?? "",
+              teamName,
+            })}
           </p>
           <div className="flex gap-3">
             <Button variant="danger" isLoading={kicking} onClick={handleKick}>
-              Kick {kickTarget?.username ?? kickTarget?.user_id}
+              {t("kickButton", {
+                member: kickTarget?.username ?? kickTarget?.user_id ?? "",
+              })}
             </Button>
             <Button variant="secondary" onClick={() => setKickTarget(null)}>
-              Cancel
+              {commonT("cancel")}
             </Button>
           </div>
         </div>
       </Dialog>
 
-      <Dialog isOpen={!!banTarget} onClose={closeBanDialog} title="Ban member">
+      <Dialog
+        isOpen={!!banTarget}
+        onClose={closeBanDialog}
+        title={t("banMemberTitle")}
+      >
         <div className="flex flex-col gap-4">
           {banError && (
             <div className="px-4 py-2 text-body rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger)]">
@@ -145,16 +155,17 @@ export const TeamMemberList = ({
             </div>
           )}
           <p className="text-body text-[var(--color-text-primary)]">
-            Ban <strong>{banTarget?.username ?? banTarget?.user_id}</strong>{" "}
-            from {teamName}? They will be removed immediately and won’t be able
-            to rejoin until the ban is lifted.
+            {t("banConfirm", {
+              member: banTarget?.username ?? banTarget?.user_id ?? "",
+              teamName,
+            })}
           </p>
           <div className="flex flex-col gap-1">
             <label
               htmlFor="ban-until"
               className="text-body font-medium text-[var(--color-text-secondary)]"
             >
-              Lift ban on (leave empty for a permanent ban)
+              {t("liftBanLabel")}
             </label>
             <input
               id="ban-until"
@@ -167,10 +178,12 @@ export const TeamMemberList = ({
           </div>
           <div className="flex gap-3">
             <Button variant="danger" isLoading={banning} onClick={handleBan}>
-              Ban {banTarget?.username ?? banTarget?.user_id}
+              {t("banButton", {
+                member: banTarget?.username ?? banTarget?.user_id ?? "",
+              })}
             </Button>
             <Button variant="secondary" onClick={closeBanDialog}>
-              Cancel
+              {commonT("cancel")}
             </Button>
           </div>
         </div>

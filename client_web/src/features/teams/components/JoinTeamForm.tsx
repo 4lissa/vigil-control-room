@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useJoinTeam } from "../hooks";
 import { Button } from "@/shared/ui/Button";
@@ -10,6 +11,7 @@ interface JoinTeamFormProps {
 }
 
 export const JoinTeamForm = ({ onSuccess }: JoinTeamFormProps) => {
+  const t = useTranslations("teams");
   const router = useRouter();
   const { mutate: joinTeam, isPending, error } = useJoinTeam();
 
@@ -36,14 +38,14 @@ export const JoinTeamForm = ({ onSuccess }: JoinTeamFormProps) => {
           {error.message}
         </div>
       )}
-      <Input name="code" label="Invitation code" required />
+      <Input name="code" label={t("invitationCode")} required />
       <Button
         type="submit"
         variant="primary"
         isLoading={isPending}
         className="w-full mt-2"
       >
-        Join team
+        {t("joinTeam")}
       </Button>
     </form>
   );

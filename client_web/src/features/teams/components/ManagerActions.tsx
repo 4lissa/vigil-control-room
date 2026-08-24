@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useGenerateInviteCode, useTransferManager } from "../hooks";
 import { TeamMemberResponse } from "../types";
 import { Button } from "@/shared/ui/Button";
@@ -17,6 +18,8 @@ export const ManagerActions = ({
   members,
   currentUserId,
 }: ManagerActionsProps) => {
+  const t = useTranslations("teams");
+  const commonT = useTranslations("common");
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [transferTarget, setTransferTarget] =
@@ -59,12 +62,12 @@ export const ManagerActions = ({
   return (
     <div className="flex flex-col gap-6">
       <h2 className="text-subtitle font-medium text-[var(--color-text-primary)]">
-        Manager actions
+        {t("managerActions")}
       </h2>
 
       <div className="flex flex-col gap-2">
         <p className="text-body text-[var(--color-text-secondary)]">
-          Invitation code
+          {t("invitationCode")}
         </p>
         {inviteCode ? (
           <div className="flex items-center gap-3">
@@ -75,7 +78,7 @@ export const ManagerActions = ({
               variant="secondary"
               onClick={() => navigator.clipboard.writeText(inviteCode)}
             >
-              Copy
+              {t("copy")}
             </Button>
           </div>
         ) : (
@@ -85,7 +88,7 @@ export const ManagerActions = ({
             onClick={handleGenerateCode}
             className="w-fit"
           >
-            Generate invite code
+            {t("generateInviteCode")}
           </Button>
         )}
       </div>
@@ -95,7 +98,7 @@ export const ManagerActions = ({
           htmlFor="transfer-target"
           className="text-body text-[var(--color-text-secondary)]"
         >
-          Transfer manager role
+          {t("transferManagerRole")}
         </label>
         <div className="flex gap-3">
           <select
@@ -104,7 +107,7 @@ export const ManagerActions = ({
             onChange={(e) => setSelectedUserId(e.target.value)}
             className="px-3 py-2 text-body rounded-md border border-[var(--color-border)] bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
           >
-            <option value="">Select a member</option>
+            <option value="">{t("selectMember")}</option>
             {otherMembers.map((m) => (
               <option key={m.id} value={m.user_id}>
                 {m.username ?? m.user_id}
@@ -116,7 +119,7 @@ export const ManagerActions = ({
             onClick={handleOpenTransfer}
             disabled={!selectedUserId}
           >
-            Transfer manager
+            {t("transferManager")}
           </Button>
         </div>
       </div>
@@ -124,7 +127,7 @@ export const ManagerActions = ({
       <Dialog
         isOpen={!!transferTarget}
         onClose={() => setTransferTarget(null)}
-        title="Transfer manager role"
+        title={t("transferManagerRole")}
       >
         <div className="flex flex-col gap-4">
           {transferError && (
@@ -133,11 +136,9 @@ export const ManagerActions = ({
             </div>
           )}
           <p className="text-body text-[var(--color-text-primary)]">
-            Transfer the Manager role to{" "}
-            <strong>
-              {transferTarget?.username ?? transferTarget?.user_id}
-            </strong>
-            ? You will become a Responder.
+            {t("transferConfirm", {
+              member: transferTarget?.username ?? transferTarget?.user_id ?? "",
+            })}
           </p>
           <div className="flex gap-3">
             <Button
@@ -145,10 +146,13 @@ export const ManagerActions = ({
               isLoading={transferring}
               onClick={handleConfirmTransfer}
             >
-              Transfer to {transferTarget?.username ?? transferTarget?.user_id}
+              {t("transferButton", {
+                member:
+                  transferTarget?.username ?? transferTarget?.user_id ?? "",
+              })}
             </Button>
             <Button variant="secondary" onClick={() => setTransferTarget(null)}>
-              Cancel
+              {commonT("cancel")}
             </Button>
           </div>
         </div>

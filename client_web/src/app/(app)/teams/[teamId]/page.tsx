@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useMe } from "@/features/auth";
 import { useTeam, useTeamMembers, setLastTeamId } from "@/features/teams";
 import { TeamMemberList } from "@/features/teams/components/TeamMemberList";
@@ -13,6 +14,8 @@ export default function TeamPage({
 }: {
   params: Promise<{ teamId: string }>;
 }) {
+  const t = useTranslations("teams");
+  const commonT = useTranslations("common");
   const { teamId } = use(params);
   const { data: user } = useMe();
   const { data: team, isLoading: teamLoading } = useTeam(teamId);
@@ -24,14 +27,16 @@ export default function TeamPage({
 
   if (teamLoading || membersLoading) {
     return (
-      <p className="text-body text-[var(--color-text-muted)]">Loading...</p>
+      <p className="text-body text-[var(--color-text-muted)]">
+        {commonT("loading")}
+      </p>
     );
   }
 
   if (!team || !members) {
     return (
       <p className="text-body text-[var(--color-text-muted)]">
-        Team not found.
+        {t("teamNotFound")}
       </p>
     );
   }
@@ -46,8 +51,8 @@ export default function TeamPage({
           {team.name}
         </h1>
         {currentMember && (
-          <p className="text-body leading-none text-[var(--color-text-muted)] capitalize">
-            - {currentMember.role}
+          <p className="text-body leading-none text-[var(--color-text-muted)]">
+            - {commonT(`roles.${currentMember.role}`)}
           </p>
         )}
       </div>
