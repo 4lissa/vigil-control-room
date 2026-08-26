@@ -131,7 +131,11 @@
     "addTimelineEntry": "Ajouter une entrée à la timeline",
     "addEntry": "Ajouter l’entrée",
     "reactWith": "Réagir avec {emoji}",
-    "reactWithUsers": "Réagir avec {emoji} ({usernames})"
+    "reactWithUsers": "Réagir avec {emoji} ({usernames})",
+    "notificationAssignedTitle": "Incident qui vous est assigné",
+    "notificationAssignedBody": "Vous avez été assigné à un incident. Ouvrez VIGIL pour le consulter.",
+    "notificationCriticalTitle": "Incident critique",
+    "notificationCriticalBody": "Un incident a atteint la sévérité critique."
   },
   "releases": {
     "heading": "Releases - {teamName}",
@@ -148,7 +152,9 @@
     "cancelRelease": "Annuler la release",
     "cancelConfirm": "Es-tu sûr de vouloir annuler {releaseName} ? C’est irréversible.",
     "confirmCancellation": "Confirmer l’annulation",
-    "keepRelease": "Garder la release"
+    "keepRelease": "Garder la release",
+    "notificationBlockedTitle": "Release bloquée",
+    "notificationBlockedBody": "Une release a été bloquée par un incident."
   },
   "messages": {
     "heading": "Messages",
