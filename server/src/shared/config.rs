@@ -24,7 +24,7 @@ impl Config {
                 .expect("SERVER_PORT must be a valid port number"),
             cors_origin: HeaderValue::from_str(&optional_env(
                 "CORS_ORIGIN",
-                "http://localhost:3000",
+                "http://localhost:8081",
             ))
             .expect("CORS_ORIGIN must be a valid header value"),
             github_client_id: required_env("GITHUB_CLIENT_ID"),
