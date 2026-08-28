@@ -68,7 +68,8 @@
     "httpConnected": "HTTP connected",
     "connect": "Connect",
     "disconnect": "Disconnect",
-    "language": "Language"
+    "language": "Language",
+    "downloadDesktopApp": "Download desktop app"
   },
   "teams": {
     "teamNotFound": "Team not found.",
