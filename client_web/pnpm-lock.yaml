@@ -11,6 +11,12 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.101.4
         version: 5.101.4(react@19.2.4)
+      '@tauri-apps/api':
+        specifier: ^2.11.1
+        version: 2.11.1
+      '@tauri-apps/plugin-notification':
+        specifier: ^2.3.3
+        version: 2.3.3
       lucide-react:
         specifier: ^1.31.0
         version: 1.31.0(react@19.2.4)
@@ -1013,6 +1019,12 @@ packages:
     resolution: {integrity: sha512-yRg2pfOCxIs4ZJW3XYYHU/WgtD04FHSnfHlpRT7h7pR77hwkdRG4wxbKe4aq6P0RvXUTBSQpQeadS1SUYUe+KA==}
     peerDependencies:
       react: ^18 || ^19
+
+  '@tauri-apps/api@2.11.1':
+    resolution: {integrity: sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA==}
+
+  '@tauri-apps/plugin-notification@2.3.3':
+    resolution: {integrity: sha512-Zw+ZH18RJb41G4NrfHgIuofJiymusqN+q8fGUIIV7vyCH+5sSn5coqRv/MWB9qETsUs97vmU045q7OyseCV3Qg==}
 
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
@@ -3898,6 +3910,12 @@ snapshots:
     dependencies:
       '@tanstack/query-core': 5.101.4
       react: 19.2.4
+
+  '@tauri-apps/api@2.11.1': {}
+
+  '@tauri-apps/plugin-notification@2.3.3':
+    dependencies:
+      '@tauri-apps/api': 2.11.1
 
   '@testing-library/dom@10.4.1':
     dependencies:

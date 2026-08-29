@@ -68,7 +68,8 @@
     "httpConnected": "HTTP connected",
     "connect": "Connect",
     "disconnect": "Disconnect",
-    "language": "Language"
+    "language": "Language",
+    "downloadDesktopApp": "Download desktop app"
   },
   "teams": {
     "teamNotFound": "Team not found.",
@@ -131,7 +132,11 @@
     "addTimelineEntry": "Add a timeline entry",
     "addEntry": "Add entry",
     "reactWith": "React with {emoji}",
-    "reactWithUsers": "React with {emoji} ({usernames})"
+    "reactWithUsers": "React with {emoji} ({usernames})",
+    "notificationAssignedTitle": "Incident assigned to you",
+    "notificationAssignedBody": "You have been assigned to an incident. Open VIGIL to view it.",
+    "notificationCriticalTitle": "Critical incident",
+    "notificationCriticalBody": "An incident has reached critical severity."
   },
   "releases": {
     "heading": "Releases - {teamName}",
@@ -148,7 +153,9 @@
     "cancelRelease": "Cancel release",
     "cancelConfirm": "Are you sure you want to cancel {releaseName}? This cannot be undone.",
     "confirmCancellation": "Confirm cancellation",
-    "keepRelease": "Keep release"
+    "keepRelease": "Keep release",
+    "notificationBlockedTitle": "Release blocked",
+    "notificationBlockedBody": "A release has been blocked by an incident."
   },
   "messages": {
     "heading": "Messages",

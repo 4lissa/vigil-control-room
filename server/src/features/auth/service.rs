@@ -328,7 +328,7 @@ mod tests {
         Config {
             database_url: String::new(),
             server_port: 8080,
-            cors_origin: HeaderValue::from_static("http://localhost:3000"),
+            cors_origin: HeaderValue::from_static("http://localhost:8081"),
             github_client_id: "client123".into(),
             github_client_secret: "secret123".into(),
             github_redirect_uri: "http://localhost:8080/github/callback".into(),

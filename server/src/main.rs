@@ -11,6 +11,12 @@ async fn main() {
 
     let config = Config::from_env();
     let db = create_pool(&config.database_url).await;
+
+    sqlx::migrate!("./migrations")
+        .run(&db)
+        .await
+        .expect("failed to run migrations");
+
     let port = config.server_port;
     let state = AppState::new(config, db);
 

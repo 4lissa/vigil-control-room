@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: ["**"]
+    tags: ["v*.*.*"]
 
 jobs:
   server:
@@ -11,6 +12,9 @@ jobs:
     defaults:
       run:
         working-directory: server
+    permissions:
+      contents: read
+      packages: write
 
     services:
       postgres:
@@ -37,28 +41,36 @@ jobs:
       TOKEN_ENCRYPTION_KEY: test-encryption-key
       KICKOFF_TOKEN: test-kickoff-token
       IS_MERGE: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') }}
+      IS_BRANCH: ${{ startsWith(github.ref, 'refs/heads/') }}
+      IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+        if: env.IS_BRANCH == 'true'
         with:
           components: rustfmt, clippy, llvm-tools
       - uses: Swatinem/rust-cache@v2
+        if: env.IS_BRANCH == 'true'
         with:
           workspaces: server
       - uses: taiki-e/install-action@v2
+        if: env.IS_BRANCH == 'true'
         with:
           tool: sqlx-cli,cargo-llvm-cov
 
       - name: Migrate
+        if: env.IS_BRANCH == 'true'
         run: cargo sqlx migrate run
 
       - name: Lint
+        if: env.IS_BRANCH == 'true'
         run: |
           cargo fmt --check
           cargo clippy -- -D warnings
 
       - name: Unit tests
+        if: env.IS_BRANCH == 'true'
         run: cargo test --lib
 
       - name: Full build
@@ -80,32 +92,58 @@ jobs:
           name: server-coverage
           path: server/target/llvm-cov/html
 
+      - uses: docker/setup-buildx-action@v3
+        if: env.IS_TAG == 'true'
+      - uses: docker/login-action@v3
+        if: env.IS_TAG == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image
+        if: env.IS_TAG == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          push: true
+          tags: ghcr.io/${{ github.repository }}/server:${{ github.ref_name }}
+
   client_web:
     name: Web client (Next.js)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: client_web
+    permissions:
+      contents: read
+      packages: write
 
     env:
       IS_MERGE: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/main') }}
+      IS_BRANCH: ${{ startsWith(github.ref, 'refs/heads/') }}
+      IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
 
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
+        if: env.IS_BRANCH == 'true'
         with:
           version: 11
       - uses: actions/setup-node@v6
+        if: env.IS_BRANCH == 'true'
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
+        if: env.IS_BRANCH == 'true'
 
       - name: Lint
+        if: env.IS_BRANCH == 'true'
         run: |
           pnpm format:check
           pnpm lint
 
       - name: Unit tests
+        if: env.IS_BRANCH == 'true'
         run: pnpm test:unit
 
       - name: Full build
@@ -126,3 +164,79 @@ jobs:
         with:
           name: client-web-coverage
           path: client_web/coverage/lcov-report
+
+      - uses: docker/setup-buildx-action@v3
+        if: env.IS_TAG == 'true'
+      - uses: docker/login-action@v3
+        if: env.IS_TAG == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image
+        if: env.IS_TAG == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./client_web
+          push: true
+          tags: ghcr.io/${{ github.repository }}/client_web:${{ github.ref_name }}
+
+  client_desktop:
+    name: Desktop client (Tauri)
+    if: startsWith(github.ref, 'refs/heads/')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client_desktop/src-tauri
+
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Tauri Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: client_desktop/src-tauri
+
+      - name: Lint
+        run: |
+          cargo fmt --check
+          cargo clippy -- -D warnings
+
+      - name: Build check
+        run: cargo check
+
+  release:
+    name: Build and publish desktop binary
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: client_desktop/src-tauri
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: client_desktop/src-tauri
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2.0.0" --locked
+
+      - name: Build dmg
+        run: cargo tauri build
+
+      - name: Rename dmg to a stable filename
+        run: cp target/release/bundle/dmg/*.dmg target/release/bundle/dmg/vigil.dmg
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: client_desktop/src-tauri/target/release/bundle/dmg/vigil.dmg
