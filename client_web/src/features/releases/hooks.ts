@@ -116,3 +116,23 @@ export const useReleaseRealtime = (teamId: string, releaseId: string) => {
     });
   }, [teamId, releaseId, onMessage, queryClient]);
 };
+
+export const useReleasesGlobalRealtime = () => {
+  const { onMessage } = useWebSocket();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    return onMessage((event) => {
+      if (
+        event.type !== "release_step_validated" &&
+        event.type !== "release_state_changed"
+      ) {
+        return;
+      }
+
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey.includes("releases"),
+      });
+    });
+  }, [onMessage, queryClient]);
+};
