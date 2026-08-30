@@ -41,7 +41,7 @@ There are three targets:
 | `timeline_entry_edited`    | Entry edited                               | Team     |
 | `reaction_added`           | Reaction added                             | Team     |
 | `reaction_removed`         | Reaction removed                           | Team     |
-| `presence_update`          | Watch/unwatch/disconnect                   | Watchers |
+| `presence_update`          | Watch/unwatch                              | Watchers |
 | `release_step_validated`   | Step validated                             | Team     |
 | `release_state_changed`    | Release state changes                      | Team     |
 | `private_message_received` | Private message sent                       | Direct   |
